@@ -80,5 +80,5 @@ echo "CONFIG_PACKAGE_curl=y" >> ./.config
 # echo "CONFIG_DEFAULT_tcp_bbr=y" >> ./.config
 # 磁盘管理
 echo "CONFIG_PACKAGE_luci-app-diskman=y" >> ./.config
-# qbit P2P
+# qBittorrent
 echo "CONFIG_PACKAGE_luci-app-qbittorrent=y >> ./.config
