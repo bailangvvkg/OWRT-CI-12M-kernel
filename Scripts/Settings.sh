@@ -80,5 +80,16 @@ echo "CONFIG_PACKAGE_curl=y" >> ./.config
 # echo "CONFIG_DEFAULT_tcp_bbr=y" >> ./.config
 # 磁盘管理
 echo "CONFIG_PACKAGE_luci-app-diskman=y" >> ./.config
+# 其他调整
+# 大鹅
+echo "CONFIG_PACKAGE_luci-app-daed=y" >> ./.config
+连上ssh不会断开并且显示文件管理
+echo "CONFIG_PACKAGE_openssh-sftp-server=y
+# echo "CONFIG_PACKAGE_kmod-tcp-bbr=y" >> ./.config
+# echo "CONFIG_DEFAULT_tcp_bbr=y" >> ./.config
+# docker只能集成
+echo "CONFIG_PACKAGE_luci-app-dockerman=y" >> ./.config
+# 集成Lucky(大吉)
+echo "CONFIG_PACKAGE_luci-app-lucky=y" >> ./.config
 # qBittorrent
 echo "CONFIG_PACKAGE_luci-app-qbittorrent=y >> ./.config
