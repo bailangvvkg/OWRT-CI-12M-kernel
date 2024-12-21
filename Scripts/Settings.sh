@@ -93,3 +93,5 @@ echo "CONFIG_PACKAGE_luci-app-dockerman=y" >> ./.config
 echo "CONFIG_PACKAGE_luci-app-lucky=y" >> ./.config
 # qBittorrent
 echo "CONFIG_PACKAGE_luci-app-qbittorrent=y" >> ./.config
+# 添加Homebox内网测速
+echo "CONFIG_PACKAGE_luci-app-homebox=y" >> ./.config
