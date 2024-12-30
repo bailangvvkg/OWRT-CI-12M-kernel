@@ -98,8 +98,9 @@ echo "CONFIG_PACKAGE_luci-app-daed=y" >> ./.config
 # echo "CONFIG_PACKAGE_luci-app-daed-next=y" >> ./.config
 ＃ 连上ssh不会断开并且显示文件管理
 echo "CONFIG_PACKAGE_openssh-sftp-server"=y
-# echo "CONFIG_PACKAGE_kmod-tcp-bbr=y" >> ./.config
-# echo "CONFIG_DEFAULT_tcp_bbr=y" >> ./.config
+# BBR 终端侧的拥塞控制算法
+echo "CONFIG_PACKAGE_kmod-tcp-bbr=y" >> ./.config
+echo "CONFIG_DEFAULT_tcp_bbr=y" >> ./.config
 # docker只能集成
 echo "CONFIG_PACKAGE_luci-app-dockerman=y" >> ./.config
 # 集成Lucky(大吉)
@@ -113,7 +114,7 @@ echo "CONFIG_PACKAGE_luci-app-v2raya=y" >> ./.config
 # NSS的sqm
 echo "CONFIG_PACKAGE_luci-app-sqm=y" >> ./.config
 echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> ./.config
-# istore
-echo "CONFIG_PACKAGE_luci-app-istorex=y" >> ./.config
+# istore 编译报错
+# echo "CONFIG_PACKAGE_luci-app-istorex=y" >> ./.config
 # QuickStart
 echo "CONFIG_PACKAGE_luci-app-quickstart=y" >> ./.config
