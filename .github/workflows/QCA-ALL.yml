@@ -37,8 +37,8 @@ jobs:
       matrix:
         # TARGET: [IPQ60XX-WIFI-YES, IPQ60XX-WIFI-NO, IPQ807X-WIFI-YES, IPQ807X-WIFI-NO]
         # TARGET: [IPQ60XX-WIFI-YES, IPQ60XX-WIFI-NO]
-        # TARGET: [IPQ60XX-WIFI-YES]
-        TARGET: [IPQ60XX-WIFI-NO]
+        TARGET: [IPQ60XX-WIFI-YES]
+        # TARGET: [IPQ60XX-WIFI-NO]
         SOURCE: [VIKINGYFY/immortalwrt]
         BRANCH: [main]
 
