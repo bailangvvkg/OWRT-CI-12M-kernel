@@ -113,4 +113,4 @@ echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> ./.config
 # istore 编译报错
 # echo "CONFIG_PACKAGE_luci-app-istorex=y" >> ./.config
 # QuickStart
-echo "CONFIG_PACKAGE_luci-app-quickstart=y" >> ./.config
+# echo "CONFIG_PACKAGE_luci-app-quickstart=y" >> ./.config
