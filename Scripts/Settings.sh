@@ -45,12 +45,12 @@ fi
 #高通平台调整
 if [[ $WRT_TARGET == *"IPQ"* ]]; then
 	#取消相关feed
-	# echo "CONFIG_FEED_packages=n" >> ./.config
-	# echo "CONFIG_FEED_sqm_scripts_=n" >> ./.config
+	echo "CONFIG_FEED_packages=n" >> ./.config
+	echo "CONFIG_FEED_sqm_scripts_=n" >> ./.config
 	#设置版本
 	echo "CONFIG_NSS_FIRMWARE_VERSION_11_4=n" >> ./.config
-	# echo "CONFIG_NSS_FIRMWARE_VERSION_12_2=y" >> ./.config
-	echo "CONFIG_NSS_FIRMWARE_VERSION_12_5=y" >> ./.config
+	echo "CONFIG_NSS_FIRMWARE_VERSION_12_2=y" >> ./.config
+	# echo "CONFIG_NSS_FIRMWARE_VERSION_12_5=y" >> ./.config
 fi
 
 #编译器优化
@@ -153,8 +153,8 @@ echo "CONFIG_PACKAGE_v2ray-core=y" >> ./.config
 echo "CONFIG_PACKAGE_v2ray-geoip=y" >> ./.config
 echo "CONFIG_PACKAGE_v2ray-geosite=y" >> ./.config
 # NSS的sqm
-echo "CONFIG_PACKAGE_luci-app-sqm=y" >> ./.config
-echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> ./.config
+# echo "CONFIG_PACKAGE_luci-app-sqm=y" >> ./.config
+# echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> ./.config
 # NSS MASH
 # echo "CONFIG_ATH11K_NSS_MESH=y" >> ./.config
 # 不知道什么 加上去
