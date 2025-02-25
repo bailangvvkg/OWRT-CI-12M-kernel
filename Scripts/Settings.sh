@@ -121,6 +121,7 @@ echo "CONFIG_PACKAGE_openssh-sftp-server=y" >> ./.config
 echo "CONFIG_PACKAGE_jq=y" >> ./.config
 # base64 修改码云上的内容 需要用到
 echo "CONFIG_PACKAGE_coreutils-base64=y" >> ./.config
+echo "CONFIG_PACKAGE_coreutils=y" >> ./.config
 # 简单明了的系统资源占用查看工具
 echo "CONFIG_PACKAGE_btop=y" >> ./.config
 # 多网盘存储
