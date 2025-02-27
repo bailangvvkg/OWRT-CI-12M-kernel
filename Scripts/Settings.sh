@@ -182,3 +182,5 @@ echo "CONFIG_PACKAGE_coremark=n" >> ./.config
 echo "CONFIG_PACKAGE_luci-app-gost=y" >> ./.config
 # Go语言解析
 # echo "CONFIG_PACKAGE_golang=y" >> ./.config
+# Git
+echo "CONFIG_PACKAGE_git-http=y" >> ./.config
