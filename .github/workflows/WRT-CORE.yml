@@ -109,28 +109,18 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          # Update package lists
           sudo -E apt -yqq update
           sudo -E apt -yqq full-upgrade
           sudo -E apt -yqq autoremove --purge
           sudo -E apt -yqq autoclean
           sudo -E apt -yqq clean
-      
-          # Install common dependencies
-          sudo -E apt -yqq install dos2unix libfuse-dev wget curl
-      
-          # Install clang, repo, android tools
-          sudo -E apt-get install -y clang-15 python3 python3-pip android-tools-adb android-tools-fastboot git make gcc
-      
-          # Remove problematic PPA if it's added
-          sudo -E add-apt-repository --remove ppa:deadsnakes/ppa
-      
-          # Set timezone
+          sudo -E apt -yqq install dos2unix libfuse-dev
+          sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+          sudo apt-get install -yqq clang-15
+          sudo -E systemctl daemon-reload
           sudo -E timedatectl set-timezone "Asia/Shanghai"
-      
-          # Export the build path as an environment variable
-          echo "BUILD_PATH=$PWD" >> $GITHUB_ENV
 
+          echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
       - name: Combine Disks(合并磁盘)
         uses: easimon/maximize-build-space@master
