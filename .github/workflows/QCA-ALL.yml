@@ -9,8 +9,8 @@ on:
   #   types:
   #     - completed
   # 每天早上5点编译
-  schedule:
-    - cron: 0 20 * * *
+  # schedule:
+  #   - cron: 0 20 * * *
   #手动编译
   workflow_dispatch:
     inputs:
