@@ -187,4 +187,4 @@ echo "CONFIG_PACKAGE_git-http=y" >> ./.config
 # Nginx替换Uhttpd
 echo "CONFIG_PACKAGE_nginx-mod-luci=y" >> ./.config
 # Nginx的图形化界面
-echo "CONFIG_PACKAGE_luci-nginx=y" >> ./.config
+echo "CONFIG_PACKAGE_luci-app-nginx=y" >> ./.config
