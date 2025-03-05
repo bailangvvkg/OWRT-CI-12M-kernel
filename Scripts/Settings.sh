@@ -62,9 +62,11 @@ fi
 if [[ $WRT_TARGET != *"X86"* ]]; then
 	echo "CONFIG_TARGET_OPTIONS=y" >> ./.config
 	echo "CONFIG_TARGET_OPTIMIZATION=\"-O3 -pipe -march=armv8-a+crypto+crc -mcpu=cortex-a53+crypto+crc -mtune=cortex-a53\"" >> ./.config
-fi
+# fi
 
-if [[ $WRT_TARGET == *"X86"* ]]; then
+else
+
+# if [[ $WRT_TARGET == *"X86"* ]]; then
 	echo "CONFIG_TARGET_OPTIONS=y" >> ./.config
  	# 通用 x86_64 优化
 	echo "CONFIG_TARGET_OPTIMIZATION=\"-O3 -pipe -march=x86-64 -mtune=generic\"" >> ./.config
