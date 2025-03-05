@@ -92,22 +92,22 @@ echo "CONFIG_KERNEL_DEBUG_INFO_BTF=y" >> ./.config
 echo "# CONFIG_KERNEL_DEBUG_INFO_REDUCED is not set" >> ./.config
 echo "CONFIG_KERNEL_XDP_SOCKETS=y" >> ./.config
 
-echo "CONFIG_BPF=y" >> ./target/linux/qualcommax/config-6.6
-echo "CONFIG_BPF_SYSCALL=y" >> ./target/linux/qualcommax/config-6.6
-echo "CONFIG_BPF_JIT=y" >> ./target/linux/qualcommax/config-6.6
-echo "CONFIG_CGROUPS=y" >> ./target/linux/qualcommax/config-6.6
-echo "CONFIG_KPROBES=y" >> ./target/linux/qualcommax/config-6.6
-echo "CONFIG_NET_INGRESS=y" >> ./target/linux/qualcommax/config-6.6
-echo "CONFIG_NET_EGRESS=y" >> ./target/linux/qualcommax/config-6.6
-echo "CONFIG_NET_SCH_INGRESS=m" >> ./target/linux/qualcommax/config-6.6
-echo "CONFIG_NET_CLS_BPF=m" >> ./target/linux/qualcommax/config-6.6
-echo "CONFIG_NET_CLS_ACT=y" >> ./target/linux/qualcommax/config-6.6
-echo "CONFIG_BPF_STREAM_PARSER=y" >> ./target/linux/qualcommax/config-6.6
-echo "CONFIG_DEBUG_INFO=y" >> ./target/linux/qualcommax/config-6.6
-echo "# CONFIG_DEBUG_INFO_REDUCED is not set" >> ./target/linux/qualcommax/config-6.6
-echo "CONFIG_DEBUG_INFO_BTF=y" >> ./target/linux/qualcommax/config-6.6
-echo "CONFIG_KPROBE_EVENTS=y" >> ./target/linux/qualcommax/config-6.6
-echo "CONFIG_BPF_EVENTS=y" >> ./target/linux/qualcommax/config-6.6
+# echo "CONFIG_BPF=y" >> ./target/linux/qualcommax/config-6.6
+# echo "CONFIG_BPF_SYSCALL=y" >> ./target/linux/qualcommax/config-6.6
+# echo "CONFIG_BPF_JIT=y" >> ./target/linux/qualcommax/config-6.6
+# echo "CONFIG_CGROUPS=y" >> ./target/linux/qualcommax/config-6.6
+# echo "CONFIG_KPROBES=y" >> ./target/linux/qualcommax/config-6.6
+# echo "CONFIG_NET_INGRESS=y" >> ./target/linux/qualcommax/config-6.6
+# echo "CONFIG_NET_EGRESS=y" >> ./target/linux/qualcommax/config-6.6
+# echo "CONFIG_NET_SCH_INGRESS=m" >> ./target/linux/qualcommax/config-6.6
+# echo "CONFIG_NET_CLS_BPF=m" >> ./target/linux/qualcommax/config-6.6
+# echo "CONFIG_NET_CLS_ACT=y" >> ./target/linux/qualcommax/config-6.6
+# echo "CONFIG_BPF_STREAM_PARSER=y" >> ./target/linux/qualcommax/config-6.6
+# echo "CONFIG_DEBUG_INFO=y" >> ./target/linux/qualcommax/config-6.6
+# echo "# CONFIG_DEBUG_INFO_REDUCED is not set" >> ./target/linux/qualcommax/config-6.6
+# echo "CONFIG_DEBUG_INFO_BTF=y" >> ./target/linux/qualcommax/config-6.6
+# echo "CONFIG_KPROBE_EVENTS=y" >> ./target/linux/qualcommax/config-6.6
+# echo "CONFIG_BPF_EVENTS=y" >> ./target/linux/qualcommax/config-6.6
 
 #修改jdc re-ss-01 (亚瑟) 的内核大小为12M
 sed -i "/^define Device\/jdcloud_re-ss-01/,/^endef/ { /KERNEL_SIZE := 6144k/s//KERNEL_SIZE := 12288k/ }" target/linux/qualcommax/image/ipq60xx.mk
