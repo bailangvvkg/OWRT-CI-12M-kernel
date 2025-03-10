@@ -158,3 +158,13 @@ Scripts/Settings.sh
 内置daed大鹅
 内置 curl 网络通信工具
 ~~内置 kmod-tcp-bbr BBR 拥塞控制算法替换Cubic(单车变摩托)~~
+
+文件名				作用			适用场景
+Config_X86_immortalwrt.txt	编译配置文件		记录 menuconfig 选项，方便复现
+x86-64-generic-kernel.bin	OpenWrt 内核文件		适用于手动更新内核
+squashfs-combined-efi.img.gz	EFI 启动镜像（gzip）	适用于 UEFI 设备，解压后 dd 刷入
+squashfs-combined-efi.vmdk	EFI 启动镜像（VMware）	适用于 VMware UEFI 模式
+squashfs-combined.img.gz	BIOS 启动镜像（gzip）	适用于 Legacy BIOS 设备，解压后 dd 刷入
+squashfs-combined.vmdk		BIOS 启动镜像（VMware）	适用于 VMware Legacy BIOS 模式
+squashfs-rootfs.img.gz		仅 RootFS 镜像		适用于 sysupgrade 或自定义 RootFS
+x86-64-rootfs.tar.gz		RootFS 归档文件		适用于 LXC、Docker 或手动挂载
