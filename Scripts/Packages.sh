@@ -122,8 +122,8 @@ UPDATE_VERSION "sing-box"
 UPDATE_VERSION "tailscale"
 
 # 拉取Lucky最新版的源码
-# git clone https://github.com/sirpdboy/luci-app-lucky.git package/lucky
-git clone https://github.com/gdy666/luci-app-lucky package/lucky
+git clone https://github.com/sirpdboy/luci-app-lucky.git package/lucky
+# git clone https://github.com/gdy666/luci-app-lucky package/lucky
 
 #删除官方的默认插件
 # rm -rf ../feeds/luci/applications/luci-app-{passwall*,mosdns,dockerman,dae*,bypass*}
