@@ -138,6 +138,6 @@ mkdir -p Package/libcron && wget -O Package/libcron/Makefile https://raw.githubu
 # # luci-app-daed-next
 # git clone https://github.com/sbwml/luci-app-daed-next package/daed-next
 
-git_sparse_clone main https://github.com/kenzok8/small-package daed-next luci-app-daed-next gost luci-app-gost
+git_sparse_clone main https://github.com/kenzok8/small-package daed-next luci-app-daed-next gost luci-app-gost luci-nginxer
 
 git_sparse_clone main https://github.com/kiddin9/kwrt-packages natter2 luci-app-natter2
