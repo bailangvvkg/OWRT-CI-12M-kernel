@@ -199,7 +199,7 @@ echo "CONFIG_PACKAGE_luci-app-mosdns=y" >> ./.config
 # 文件管理器
 echo "CONFIG_PACKAGE_luci-app-filemanager=y" >> ./.config
 # 不要coremark 避免多线程编译报错
-echo "CONFIG_PACKAGE_coremark=n" >> ./.config
+# echo "CONFIG_PACKAGE_coremark=n" >> ./.config
 # 基于Golang的多协议转发工具
 echo "CONFIG_PACKAGE_luci-app-gost=y" >> ./.config
 # Go语言解析
