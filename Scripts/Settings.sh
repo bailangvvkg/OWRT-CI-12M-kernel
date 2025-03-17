@@ -212,3 +212,5 @@ echo "CONFIG_PACKAGE_git-http=y" >> ./.config
 # echo "CONFIG_PACKAGE_luci-nginxer=y" >> ./.config
 # HAProxy 比Nginx更强大的反向代理服务器
 echo "CONFIG_PACKAGE_luci-app-haproxy-tcp=y" >> ./.config
+# Adguardhome去广告
+echo "CONFIG_PACKAGE_luci-app-adguardhome=y" >> ./.config
