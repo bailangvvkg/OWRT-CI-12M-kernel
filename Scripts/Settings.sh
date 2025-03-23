@@ -152,6 +152,7 @@ echo "CONFIG_PACKAGE_luci-app-alist=y" >> ./.config
 echo "CONFIG_PACKAGE_luci-app-lucky=y" >> ./.config
 # 网络通信工具
 echo "CONFIG_PACKAGE_curl=y" >> ./.config
+echo "CONFIG_PACKAGE_tcping=y" >> ./.config
 # BBR 拥塞控制算法(终端侧)
 echo "CONFIG_PACKAGE_kmod-tcp-bbr=y" >> ./.config
 echo "CONFIG_DEFAULT_tcp_bbr=y" >> ./.config
