@@ -93,13 +93,6 @@ jobs:
             /usr/share/azure* /usr/share/dotnet* /usr/share/glade* /usr/share/miniconda* /usr/share/php* /usr/share/swift \
             /var/lib/mysql* /var/log/azure*"
 
-      - name: Combine Disks(合并磁盘)
-        uses: easimon/maximize-build-space@master
-        with:
-          swap-size-mb: 2048
-          temp-reserve-mb: 100
-          root-reserve-mb: 2048
-
       - name: Initialization Environment(安装依赖环境)
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -119,9 +112,13 @@ jobs:
           # sudo mkdir -p /mnt/build_wrt
           # sudo chown $USER:$USER /mnt/build_wrt
           # sudo ln -s /mnt/build_wrt $GITHUB_WORKSPACE/wrt
-          sudo mkdir -p $OPENWRT_PATH/build_wrt
-          sudo chown $USER:$USER $OPENWRT_PATH/build_wrt
-          sudo ln -s $OPENWRT_PATH/build_wrt $GITHUB_WORKSPACE/wrt
+
+      - name: Combine Disks(合并磁盘)
+        uses: easimon/maximize-build-space@master
+        with:
+          swap-size-mb: 2048
+          temp-reserve-mb: 100
+          root-reserve-mb: 2048
 
       - name: Checkout Projects
         uses: actions/checkout@main
@@ -134,6 +131,10 @@ jobs:
           echo "WRT_TARGET=$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' ./Config/$WRT_CONFIG.txt | tr '[:lower:]' '[:upper:]')" >> $GITHUB_ENV
           echo "WRT_KVER=none" >> $GITHUB_ENV
           echo "WRT_LIST=none" >> $GITHUB_ENV
+
+          sudo mkdir -p $OPENWRT_PATH/build_wrt
+          sudo chown $USER:$USER $OPENWRT_PATH/build_wrt
+          sudo ln -s $OPENWRT_PATH/build_wrt $GITHUB_WORKSPACE/wrt
 
       - name: Clone Code
         run: |
