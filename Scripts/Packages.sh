@@ -142,4 +142,4 @@ mkdir -p Package/libcron && wget -O Package/libcron/Makefile https://raw.githubu
 
 git_sparse_clone main https://github.com/kenzok8/small-package daed-next luci-app-daed-next gost luci-app-gost luci-nginxer luci-app-adguardhome
 
-git_sparse_clone main https://github.com/kiddin9/kwrt-packages natter2 luci-app-natter2 luci-app-cloudflarespeedtest
+git_sparse_clone main https://github.com/kiddin9/kwrt-packages natter2 luci-app-natter2 luci-app-cloudflarespeedtest luci-app-nfs
