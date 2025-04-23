@@ -229,3 +229,5 @@ echo "CONFIG_PACKAGE_luci-app-cloudflarespeedtest=y" >> ./.config
 echo "CONFIG_PACKAGE_luci-app-openclash=y" >> ./.config
 # nfs-kernel-server共享
 echo "CONFIG_PACKAGE_nfs-kernel-server=y" >> ./.config
+# Kiddin9 luci-app-nfs
+echo "CONFIG_PACKAGE_luci-app-nfs=y" >> ./.config
