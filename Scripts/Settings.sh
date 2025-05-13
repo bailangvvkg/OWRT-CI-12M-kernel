@@ -231,3 +231,5 @@ echo "CONFIG_PACKAGE_luci-app-openclash=y" >> ./.config
 echo "CONFIG_PACKAGE_nfs-kernel-server=y" >> ./.config
 # Kiddin9 luci-app-nfs
 echo "CONFIG_PACKAGE_luci-app-nfs=y" >> ./.config
+# zoneinfo-asia tzdata（时区数据库）的一部分，只包含亚洲相关的时区数据 zoneinfo-all全部时区（体积较大，不推荐在嵌入设备）
+echo "CONFIG_PACKAGE_zoneinfo-all=y" >> ./.config
