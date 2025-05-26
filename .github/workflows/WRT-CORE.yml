@@ -294,5 +294,7 @@ jobs:
             WIFI密码：${{env.WRT_WORD}}
 
             内核版本：${{env.WRT_KVER}}
-            Wifi版本：${{env.NSS_FIRMWARE_VERSION}}
+
+            NSS版本：${{env.NSS_FIRMWARE_VERSION}}
+
             插件列表：${{env.WRT_LIST}}
