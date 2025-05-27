@@ -157,12 +157,6 @@ fix_default_set() {
             \cp -f "$BASE_PATH/patches/tempinfo" "$BUILD_DIR/package/emortal/autocore/files/tempinfo"
         fi
     fi
-
-    # uci set network.wan.proto='pppoe'
-    # uci set network.wan.username='your_username'
-    # uci set network.wan.password='your_password'
-    # uci commit network
-    # /etc/init.d/network restart
 }
 
 # 添加系统升级时的备份信息
