@@ -214,7 +214,7 @@ jobs:
           $GITHUB_WORKSPACE/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Scripts/Handles.sh
 
-          cat package/base-files/files/etc/uci-defaults/991_custom_settings
+          # cat package/base-files/files/etc/uci-defaults/991_custom_settings
 
       - name: Custom Settings(自定义设置)
         run: |
