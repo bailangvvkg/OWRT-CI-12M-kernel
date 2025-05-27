@@ -146,4 +146,38 @@ git_sparse_clone main https://github.com/kiddin9/kwrt-packages natter2 luci-app-
 
 wget "https://alist4.lovelyy.eu.org/d/CloudFlareR2/immortalwrt/nginx/ngnx.conf?sign=FN_uiyymuja-Aj1z4I4Pevn3arIZXBdslq8Zjd_akdo=:0" -O ../feeds/packages/net/nginx-util/files/nginx.config
 echo 检测一下nginx的配置文件
-cat ../feeds/packages/net/nginx-util/files/nginx.config
+# cat ../feeds/packages/net/nginx-util/files/nginx.config
+
+# 添加系统升级时的备份信息
+function add_backup_info_to_sysupgrade() {
+    local conf_path="../package/base-files/files/etc/sysupgrade.conf"
+
+    if [ -f "$conf_path" ]; then
+        cat >"$conf_path" <<'EOF'
+/etc/lucky/
+/etc/daed/wing.db
+/etc/alist
+EOF
+    fi
+}
+
+# 更新启动顺序
+function update_script_priority() {
+    # 更新qca-nss驱动的启动顺序
+    local qca_drv_path="../package/feeds/nss_packages/qca-nss-drv/files/qca-nss-drv.init"
+    if [ -d "${qca_drv_path%/*}" ] && [ -f "$qca_drv_path" ]; then
+        sed -i 's/START=.*/START=88/g' "$qca_drv_path"
+    fi
+
+    # 更新pbuf服务的启动顺序
+    local pbuf_path="../package/kernel/mac80211/files/qca-nss-pbuf.init"
+    if [ -d "${pbuf_path%/*}" ] && [ -f "$pbuf_path" ]; then
+        sed -i 's/START=.*/START=89/g' "$pbuf_path"
+    fi
+
+    # 更新mosdns服务的启动顺序
+    local mosdns_path="../package/feeds/small8/luci-app-mosdns/root/etc/init.d/mosdns"
+    if [ -d "${mosdns_path%/*}" ] && [ -f "$mosdns_path" ]; then
+        sed -i 's/START=.*/START=94/g' "$mosdns_path"
+    fi
+}
