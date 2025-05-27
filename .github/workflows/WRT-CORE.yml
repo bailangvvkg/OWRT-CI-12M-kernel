@@ -195,12 +195,19 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
+      - name: 替换 PPPoE 账号和密码
+        run: |
+          sed -i "s/__PPPOE_USER__/${{ secrets.PPPOE_USER }}/g" package/base-files/files/etc/uci-defaults/991_custom_settings
+          sed -i "s/__PPPOE_PASS__/${{ secrets.PPPOE_PASS }}/g" package/base-files/files/etc/uci-defaults/991_custom_settings
+
       - name: Custom Packages(自定义软件包设置/更新)
         run: |
           cd ./wrt/package/
 
           $GITHUB_WORKSPACE/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Scripts/Handles.sh
+
+          cat package/base-files/files/etc/uci-defaults/991_custom_settings
 
       - name: Custom Settings(自定义设置)
         run: |
