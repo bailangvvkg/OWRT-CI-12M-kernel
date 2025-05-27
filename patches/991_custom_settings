@@ -24,3 +24,18 @@ uci commit luci
 
 # 修复识别内存错误导致tmp小于内存
 mount -o remount,size=$(awk '/MemTotal/ {print $2"k"}' /proc/meminfo) /tmp
+
+# 判断账号密码是否设置
+if [ -n "$PPPOE_USER" ] && [ -n "$PPPOE_PASS" ]; then
+    echo "配置 PPPoE 拨号账户..."
+
+    uci set network.wan.proto='pppoe'
+    uci set network.wan.username="$PPPOE_USER"
+    uci set network.wan.password="$PPPOE_PASS"
+    uci commit network
+    /etc/init.d/network restart
+
+    echo "PPPoE 配置完成"
+else
+    echo "未设置 PPPoE 账号密码，跳过配置"
+fi
