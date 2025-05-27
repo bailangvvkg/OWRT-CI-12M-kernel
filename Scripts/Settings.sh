@@ -216,7 +216,7 @@ echo "CONFIG_PACKAGE_luci-app-gost=y" >> ./.config
 # Git
 echo "CONFIG_PACKAGE_git-http=y" >> ./.config
 # Nginx替换Uhttpd
-# echo "CONFIG_PACKAGE_nginx-mod-luci=y" >> ./.config
+echo "CONFIG_PACKAGE_nginx-mod-luci=y" >> ./.config
 # Nginx的图形化界面
 # echo "CONFIG_PACKAGE_luci-nginxer=y" >> ./.config
 # HAProxy 比Nginx更强大的反向代理服务器
