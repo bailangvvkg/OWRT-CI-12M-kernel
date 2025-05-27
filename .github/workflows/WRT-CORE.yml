@@ -102,7 +102,8 @@ jobs:
           sudo -E apt -yqq autoremove --purge
           sudo -E apt -yqq autoclean
           sudo -E apt -yqq clean
-          sudo -E apt -yqq install dos2unix libfuse-dev clang-15 llvm-15 npm
+          sudo -E apt -yqq install dos2unix libfuse-dev npm
+          # sudo -E apt -yqq install clang-15 llvm-15
           sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
           sudo -E systemctl daemon-reload
           sudo -E timedatectl set-timezone "Asia/Shanghai"
@@ -112,6 +113,11 @@ jobs:
           # sudo mkdir -p /mnt/build_wrt
           # sudo chown $USER:$USER /mnt/build_wrt
           # sudo ln -s /mnt/build_wrt $GITHUB_WORKSPACE/wrt
+
+      - name: Install LLVM and Clang(安装最新的 LLVM/Clang)
+        uses: KyleMayes/install-llvm-action@v2       # :contentReference[oaicite:0]{index=0}
+        with:
+          version: "latest"                          # 或者写 "20.1"、"20.1.5" 等
 
       - name: Combine Disks(合并磁盘)
         uses: easimon/maximize-build-space@master
