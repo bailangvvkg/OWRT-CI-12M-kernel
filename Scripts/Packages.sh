@@ -168,6 +168,7 @@ function add_backup_info_to_sysupgrade() {
 /etc/lucky/
 /etc/daed/wing.db
 /etc/alist
+/etc/config/nginx
 EOF
     fi
 }
