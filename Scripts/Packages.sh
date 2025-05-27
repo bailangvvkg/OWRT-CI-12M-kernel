@@ -148,6 +148,23 @@ wget "https://alist4.lovelyy.eu.org/d/CloudFlareR2/immortalwrt/nginx/ngnx.conf?s
 echo 检测一下nginx的配置文件
 # cat ../feeds/packages/net/nginx-util/files/nginx.config
 
+fix_default_set() {
+    # install -Dm755 "$BASE_PATH/patches/990_set_argon_primary" "$BUILD_DIR/package/base-files/files/etc/uci-defaults/990_set_argon_primary"
+    install -Dm755 "$BASE_PATH/patches/991_custom_settings" "$BUILD_DIR/package/base-files/files/etc/uci-defaults/991_custom_settings"
+
+    if [ -f "$BUILD_DIR/package/emortal/autocore/files/tempinfo" ]; then
+        if [ -f "$BASE_PATH/patches/tempinfo" ]; then
+            \cp -f "$BASE_PATH/patches/tempinfo" "$BUILD_DIR/package/emortal/autocore/files/tempinfo"
+        fi
+    fi
+
+    # uci set network.wan.proto='pppoe'
+    # uci set network.wan.username='your_username'
+    # uci set network.wan.password='your_password'
+    # uci commit network
+    # /etc/init.d/network restart
+}
+
 # 添加系统升级时的备份信息
 function add_backup_info_to_sysupgrade() {
     local conf_path="../package/base-files/files/etc/sysupgrade.conf"
