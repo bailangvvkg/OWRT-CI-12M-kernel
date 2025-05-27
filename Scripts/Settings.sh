@@ -92,18 +92,33 @@ sed -i "s/Interface/DirectInterface/" ./package/network/services/dropbear/files/
 # sed -i 's/mkdir \$(PKG_BUILD_DIR)\/\$(ARCH)/mkdir -p \$(PKG_BUILD_DIR)\/\$(ARCH)/g' ../feeds/packages/utils/coremark/Makefile
 
 # eBPF
+# echo "CONFIG_DEVEL=y" >> ./.config
+# echo "CONFIG_BPF_TOOLCHAIN_HOST=y" >> ./.config
+# echo "# CONFIG_BPF_TOOLCHAIN_NONE is not set" >> ./.config
+# echo "CONFIG_KERNEL_BPF_EVENTS=y" >> ./.config
+# echo "CONFIG_KERNEL_CGROUP_BPF=y" >> ./.config
+# echo "CONFIG_KERNEL_DEBUG_INFO=y" >> ./.config
+# echo "CONFIG_KERNEL_DEBUG_INFO_BTF=y" >> ./.config
+# echo "# CONFIG_KERNEL_DEBUG_INFO_REDUCED is not set" >> ./.config
+# echo "CONFIG_KERNEL_XDP_SOCKETS=y" >> ./.config
 echo "CONFIG_DEVEL=y" >> ./.config
-echo "CONFIG_BPF_TOOLCHAIN_HOST=y" >> ./.config
-echo "# CONFIG_BPF_TOOLCHAIN_NONE is not set" >> ./.config
-echo "CONFIG_KERNEL_BPF_EVENTS=y" >> ./.config
-echo "CONFIG_KERNEL_CGROUP_BPF=y" >> ./.config
 echo "CONFIG_KERNEL_DEBUG_INFO=y" >> ./.config
+echo "CONFIG_KERNEL_DEBUG_INFO_REDUCED=n" >> ./.config
 echo "CONFIG_KERNEL_DEBUG_INFO_BTF=y" >> ./.config
-echo "# CONFIG_KERNEL_DEBUG_INFO_REDUCED is not set" >> ./.config
+echo "CONFIG_KERNEL_CGROUPS=y" >> ./.config
+echo "CONFIG_KERNEL_CGROUP_BPF=y" >> ./.config
+echo "CONFIG_KERNEL_BPF_EVENTS=y" >> ./.config
+echo "CONFIG_BPF_TOOLCHAIN_HOST=y" >> ./.config
 echo "CONFIG_KERNEL_XDP_SOCKETS=y" >> ./.config
+echo "CONFIG_PACKAGE_kmod-xdp-sockets-diag=y" >> ./.config
+echo "CONFIG_BPF_TOOLCHAIN_NONE=n" >> ./.config
 
 # BPFtool 支持 eBPF 程序 反汇编（disassembly）
 echo "CONFIG_PACKAGE_bpftool-full=y" >> ./.config
+
+#开启内存回收补丁
+echo "CONFIG_KERNEL_SKB_RECYCLER=y" >> ./.config
+echo "CONFIG_KERNEL_SKB_RECYCLER_MULTI_CPU=y" >> ./.config
 
 # echo "CONFIG_BPF=y" >> ./target/linux/qualcommax/config-6.6
 # echo "CONFIG_BPF_SYSCALL=y" >> ./target/linux/qualcommax/config-6.6
