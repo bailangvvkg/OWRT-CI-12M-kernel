@@ -250,17 +250,3 @@ echo "CONFIG_PACKAGE_luci-app-nfs=y" >> ./.config
 echo "CONFIG_PACKAGE_zoneinfo-all=y" >> ./.config
 # Caddy
 echo "CONFIG_PACKAGE_luci-app-caddy=y" >> ./.config
-
-# 添加系统升级时的备份信息
-function add_backup_info_to_sysupgrade() {
-    local conf_path="../package/base-files/files/etc/sysupgrade.conf"
-
-    if [ -f "$conf_path" ]; then
-        cat >"$conf_path" <<'EOF'
-/etc/lucky/
-/etc/daed/wing.db
-/etc/alist
-EOF
-    fi
-}
-add_backup_info_to_sysupgrade
