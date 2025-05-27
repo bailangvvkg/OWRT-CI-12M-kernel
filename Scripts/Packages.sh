@@ -150,7 +150,7 @@ echo 检测一下nginx的配置文件
 
 fix_default_set() {
     # install -Dm755 "$BASE_PATH/patches/990_set_argon_primary" "$BUILD_DIR/package/base-files/files/etc/uci-defaults/990_set_argon_primary"
-    install -Dm755 "$BASE_PATH/patches/991_custom_settings" "$BUILD_DIR/package/base-files/files/etc/uci-defaults/991_custom_settings"
+    install -Dm755 "$BASE_PATH/patches/991_custom_settings" "../package/base-files/files/etc/uci-defaults/991_custom_settings"
 
     if [ -f "$BUILD_DIR/package/emortal/autocore/files/tempinfo" ]; then
         if [ -f "$BASE_PATH/patches/tempinfo" ]; then
@@ -193,3 +193,11 @@ function update_script_priority() {
         sed -i 's/START=.*/START=94/g' "$mosdns_path"
     fi
 }
+
+main() {
+	fix_default_set
+ 	add_backup_info_to_sysupgrade
+	update_script_priority
+}
+
+main "$@"
