@@ -114,10 +114,10 @@ jobs:
           # sudo chown $USER:$USER /mnt/build_wrt
           # sudo ln -s /mnt/build_wrt $GITHUB_WORKSPACE/wrt
 
-      - name: Install LLVM and Clang(安装最新的 LLVM/Clang)
-        uses: KyleMayes/install-llvm-action@v2       # :contentReference[oaicite:0]{index=0}
+      - name: Install latest Clang/LLVM(安装最新的 LLVM/Clang)
+        uses: egor-tensin/setup-clang@v1
         with:
-          version: "20.1"                          # 或者写 "20.1"、"20.1.5" 等
+          version: "latest"
 
       - name: Combine Disks(合并磁盘)
         uses: easimon/maximize-build-space@master
