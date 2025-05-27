@@ -196,7 +196,7 @@ jobs:
           ./scripts/feeds install -a
 
       - name: 替换 PPPoE 账号和密码
-      if: env.QCA-ALL == 'true'
+        if: env.QCA-ALL == 'true'
         run: |
           sed -i "s/__PPPOE_USER__/${{ secrets.PPPOE_USER }}/g" patches/991_custom_settings
           sed -i "s/__PPPOE_PASS__/${{ secrets.PPPOE_PASS }}/g" patches/991_custom_settings
