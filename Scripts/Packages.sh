@@ -144,5 +144,5 @@ git_sparse_clone main https://github.com/kenzok8/small-package daed-next luci-ap
 
 git_sparse_clone main https://github.com/kiddin9/kwrt-packages natter2 luci-app-natter2 luci-app-cloudflarespeedtest luci-app-nfs luci-app-caddy openwrt-caddy
 
-
+echo 检测一下nginx的配置文件
 cat ../feeds/packages/net/nginx-util/files/nginx.config
