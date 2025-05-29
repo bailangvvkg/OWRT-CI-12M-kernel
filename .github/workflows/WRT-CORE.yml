@@ -115,10 +115,14 @@ jobs:
           # sudo ln -s /mnt/build_wrt $GITHUB_WORKSPACE/wrt
 
       - name: Install latest Clang/LLVM(安装最新的 LLVM/Clang)
-        uses: egor-tensin/setup-clang@v1
-        with:
-          version: "latest"
-
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lsb-release wget software-properties-common gnupg
+          wget -qO - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          echo "deb http://apt.llvm.org/$(lsb_release -sc)/ llvm-toolchain-$(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update
+          sudo apt-get install -y clang llvm
+  
       - name: Combine Disks(合并磁盘)
         uses: easimon/maximize-build-space@master
         with:
