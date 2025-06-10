@@ -149,8 +149,10 @@ wget "https://alist4.lovelyy.eu.org/d/CloudFlareR2/immortalwrt/nginx/ngnx.conf?s
 # cat ../feeds/packages/net/nginx-util/files/nginx.config
 
 # package/network/services/dnsmasq/files/dhcp.conf
-sed -i '/^\s*option\s\+min_cache_ttl\s\+/s/^/#/' ../feeds/package/network/services/dnsmasq/files/dhcp.conf
-sed -i '/^\s*option\s\+use_stale_cache\s\+/s/^/#/' ../feeds/package/network/services/dnsmasq/files/dhcp.conf
+# sed -i '/^\s*option\s\+min_cache_ttl\s\+/s/^/#/' ../feeds/package/network/services/dnsmasq/files/dhcp.conf
+# sed -i '/^\s*option\s\+use_stale_cache\s\+/s/^/#/' ../feeds/package/network/services/dnsmasq/files/dhcp.conf
+
+find .. -name dhcp.conf
 
 # 检查是更改正确了
 grep -E 'min_cache_ttl|use_stale_cache' ../feeds/package/network/services/dnsmasq/files/dhcp.conf
