@@ -101,6 +101,7 @@ jobs:
           sudo -E apt -yqq autoclean
           sudo -E apt -yqq clean
           sudo -E apt -yqq install dos2unix libfuse-dev python3-netifaces
+          sudo -E apt -yqq install clang
           sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
           sudo -E systemctl daemon-reload
           sudo -E timedatectl set-timezone "Asia/Shanghai"
@@ -111,14 +112,14 @@ jobs:
 
           echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
-      - name: Install latest Clang/LLVM(安装最新的 LLVM/Clang)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y lsb-release wget software-properties-common gnupg
-          wget -qO - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          echo "deb http://apt.llvm.org/$(lsb_release -sc)/ llvm-toolchain-$(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/llvm.list
-          sudo apt-get update
-          sudo apt-get install -y clang llvm
+      # - name: Install latest Clang/LLVM(安装最新的 LLVM/Clang)
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y lsb-release wget software-properties-common gnupg
+      #     wget -qO - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+      #     echo "deb http://apt.llvm.org/$(lsb_release -sc)/ llvm-toolchain-$(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/llvm.list
+      #     sudo apt-get update
+      #     sudo apt-get install -y clang llvm
 
       - name: Combine Disks(合并磁盘)
         uses: easimon/maximize-build-space@master
