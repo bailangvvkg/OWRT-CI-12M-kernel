@@ -68,3 +68,150 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 	#其他调整
 	echo "CONFIG_PACKAGE_kmod-usb-serial-qualcomm=y" >> ./.config
 fi
+
+# 编译器优化
+if [[ $WRT_TARGET != *"X86"* ]]; then
+	echo "CONFIG_TARGET_OPTIONS=y" >> ./.config
+	# echo "CONFIG_TARGET_OPTIMIZATION=\"-O3 -pipe -march=armv8-a+crypto+crc -mcpu=cortex-a53+crypto+crc -mtune=cortex-a53\"" >> ./.config
+    # 均衡
+	echo "CONFIG_TARGET_OPTIMIZATION=\"-O2 -pipe -march=armv8-a+crypto+crc -mcpu=cortex-a53+crypto+crc -mtune=cortex-a53\"" >> ./.config
+    # - -Ofast ：比 -O3 更激进的优化级别，自动启用 -ffast-math 等选项
+    # - -ffast-math （Ofast 包含）：激进的浮点优化，忽略部分 IEEE 754 标准
+    # - -funroll-all-loops ：比 -funroll-loops 更激进，展开所有循环
+    # - -fipa-pta ：过程间指针分析，优化指针使用
+    # - -fallow-store-data-races ：允许存储操作重排序，可能提高单线程性能
+    # - -funsafe-loop-optimizations ：激进的循环优化，可能改变程序行为
+    # echo "CONFIG_TARGET_OPTIMIZATION="-Ofast -pipe -flto -funroll-all-loops -fpeel-loops -ftree-vectorize -fgcse-after-reload -fipa-pta -fallow-store-data-races -funsafe-loop-optimizations -march=armv8-a+crypto+crc -mcpu=cortex-a53+crypto+crc -mtune=cortex-a53"" >> ./.config
+fi
+
+
+function cat_ebpf_config() {
+#ebpf相关
+  cat >> .config <<EOF
+#eBPF
+CONFIG_DEVEL=y
+CONFIG_KERNEL_DEBUG_INFO=y
+CONFIG_KERNEL_DEBUG_INFO_REDUCED=n
+CONFIG_KERNEL_DEBUG_INFO_BTF=y
+CONFIG_KERNEL_CGROUPS=y
+CONFIG_KERNEL_CGROUP_BPF=y
+CONFIG_KERNEL_BPF_EVENTS=y
+CONFIG_BPF_TOOLCHAIN_HOST=y
+CONFIG_KERNEL_XDP_SOCKETS=y
+CONFIG_PACKAGE_kmod-xdp-sockets-diag=y
+EOF
+}
+cat_ebpf_config
+
+# BPFtool 支持 eBPF 程序 反汇编（disassembly）
+echo "CONFIG_PACKAGE_bpftool-full=y" >> ./.config
+
+function set_kernel_size() {
+  #修改jdc ax1800 pro 的内核大小为12M
+  image_file='./target/linux/qualcommax/image/ipq60xx.mk'
+  sed -i "/^define Device\/jdcloud_re-ss-01/,/^endef/ { /KERNEL_SIZE := 6144k/s//KERNEL_SIZE := 12288k/ }" $image_file
+  sed -i "/^define Device\/jdcloud_re-cs-02/,/^endef/ { /KERNEL_SIZE := 6144k/s//KERNEL_SIZE := 12288k/ }" $image_file
+  sed -i "/^define Device\/jdcloud_re-cs-07/,/^endef/ { /KERNEL_SIZE := 6144k/s//KERNEL_SIZE := 12288k/ }" $image_file
+  sed -i "/^define Device\/redmi_ax5-jdcloud/,/^endef/ { /KERNEL_SIZE := 6144k/s//KERNEL_SIZE := 12288k/ }" $image_file
+  sed -i "/^define Device\/linksys_mr/,/^endef/ { /KERNEL_SIZE := 8192k/s//KERNEL_SIZE := 12288k/ }" $image_file
+  sed -i "/^define Device\/link_nn6000-v1/,/^endef/ { /KERNEL_SIZE := 6144k/s//KERNEL_SIZE := 12288k/ }" $image_file
+}
+set_kernel_size
+
+# #修复dropbear
+sed -i "s/Interface/DirectInterface/" ./package/network/services/dropbear/files/dropbear.config
+
+# 想要剔除的
+# echo "CONFIG_PACKAGE_htop=n" >> ./.config
+# echo "CONFIG_PACKAGE_iperf3=n" >> ./.config
+echo "CONFIG_PACKAGE_luci-app-wolplus=n" >> ./.config
+echo "CONFIG_PACKAGE_luci-app-tailscale=n" >> ./.config
+echo "CONFIG_PACKAGE_luci-app-advancedplus=n" >> ./.config
+echo "CONFIG_PACKAGE_luci-theme-kucat=n" >> ./.config
+
+# Docker --cpuset-cpus="0-1"
+echo "CONFIG_CGROUPS=y" >> ./.config
+echo "CONFIG_CPUSETS=y" >> ./.config
+
+# bash命令兼容工具
+echo "CONFIG_PACKAGE_bash=y" >> ./.config
+# 可以让FinalShell查看文件列表并且ssh连上不会自动断开
+echo "CONFIG_PACKAGE_openssh-sftp-server=y" >> ./.config
+# 解析、查询、操作和格式化 JSON 数据
+echo "CONFIG_PACKAGE_jq=y" >> ./.config
+# base64 修改码云上的内容 需要用到
+echo "CONFIG_PACKAGE_coreutils-base64=y" >> ./.config
+echo "CONFIG_PACKAGE_coreutils=y" >> ./.config
+# 简单明了的系统资源占用查看工具
+echo "CONFIG_PACKAGE_btop=y" >> ./.config
+# 多网盘存储
+# echo "CONFIG_PACKAGE_luci-app-alist=y" >> ./.config
+echo "CONFIG_PACKAGE_luci-app-openlist2=y" >> ./.config
+# 强大的工具(需要添加源或git clone)
+echo "CONFIG_PACKAGE_luci-app-lucky=y" >> ./.config
+# 网络通信工具
+echo "CONFIG_PACKAGE_curl=y" >> ./.config
+echo "CONFIG_PACKAGE_tcping=y" >> ./.config
+# BBR 拥塞控制算法(终端侧) + CAKE 一种现代化的队列管理算法(路由侧)
+echo "CONFIG_PACKAGE_kmod-tcp-bbr=y" >> ./.config
+# echo "CONFIG_DEFAULT_tcp_bbr=y" >> ./.config
+# echo "CONFIG_DEFAULT_tcp_cubic=y" >> ./.config
+# 更改默认的拥塞控制算法为cubic
+echo "CONFIG_DEFAULT_tcp_cubic=y" >> ./.config
+# 磁盘管理
+echo "CONFIG_PACKAGE_luci-app-diskman=y" >> ./.config
+echo "CONFIG_PACKAGE_cfdisk=y" >> ./.config
+# docker(只能集成)
+echo "CONFIG_PACKAGE_luci-app-dockerman=y" >> ./.config
+# Podman
+# echo "CONFIG_PACKAGE_luci-app-podman=y" >> ./.config
+# qBittorrent
+# echo "CONFIG_PACKAGE_luci-app-qbittorrent=y" >> ./.config
+# 强大的工具Lucky大吉(需要添加源或git clone)
+echo "CONFIG_PACKAGE_luci-app-lucky=y" >> ./.config
+# Caddy
+# echo "CONFIG_PACKAGE_luci-app-caddy=y" >> ./.config
+# V2rayA
+# echo "CONFIG_PACKAGE_luci-app-v2raya=y" >> ./.config
+# echo "CONFIG_PACKAGE_v2ray-core=y" >> ./.config
+# echo "CONFIG_PACKAGE_v2ray-geoip=y" >> ./.config
+# echo "CONFIG_PACKAGE_v2ray-geosite=y" >> ./.config
+# Natter2 报错
+# echo "CONFIG_PACKAGE_luci-app-natter2=y" >> ./.config
+# 文件管理器
+echo "CONFIG_PACKAGE_luci-app-filemanager=y" >> ./.config
+# 基于Golang的多协议转发工具
+echo "CONFIG_PACKAGE_luci-app-gost=y" >> ./.config
+# Git
+echo "CONFIG_PACKAGE_git-http=y" >> ./.config
+# Nginx替换Uhttpd
+echo "CONFIG_PACKAGE_nginx-mod-luci=y" >> ./.config
+# Nginx的图形化界面
+echo "CONFIG_PACKAGE_luci-app-nginx=y" >> ./.config
+# HAProxy 比Nginx更强大的反向代理服务器
+# echo "CONFIG_PACKAGE_luci-app-haproxy-tcp=y" >> ./.config
+# Adguardhome去广告
+echo "CONFIG_PACKAGE_luci-app-adguardhome=y" >> ./.config
+# cloudflre速度筛选器
+# echo "CONFIG_PACKAGE_luci-app-cloudflarespeedtest=y" >> ./.config
+# OpenClash
+# echo "CONFIG_PACKAGE_luci-app-openclash=y" >> ./.config
+# nfs-kernel-server共享
+# echo "CONFIG_PACKAGE_nfs-kernel-server=y" >> ./.config
+# Kiddin9 luci-app-nfs
+# echo "CONFIG_PACKAGE_luci-app-nfs=y" >> ./.config
+# zoneinfo-asia tzdata（时区数据库）的一部分，只包含亚洲相关的时区数据 zoneinfo-all全部时区（体积较大，不推荐在嵌入设备）
+echo "CONFIG_PACKAGE_zoneinfo-all=y" >> ./.config
+# Caddy
+# echo "CONFIG_PACKAGE_luci-app-caddy=y" >> ./.config
+# Openssl
+# echo "CONFIG_PACKAGE_openssl-util=y" >> ./.config
+# dig命令
+echo "CONFIG_PACKAGE_bind-dig=y" >> ./.config
+# ss 网络抓包工具
+echo "CONFIG_PACKAGE_ss=y" >> ./.config
+# coreutils-date让你的时间计步器精确到纳秒
+echo "CONFIG_PACKAGE_coreutils-date=y" >> ./.config
+# 查看在线端
+# echo "CONFIG_PACKAGE_luci-app-serverchand=y" >> ./.config
+echo "CONFIG_PACKAGE_luci-app-pushbot=y" >> ./.config
