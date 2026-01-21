@@ -145,8 +145,8 @@ CONFIG_PACKAGE_kmod-xdp-sockets-diag=y
 
 # 为了完整支持daed的eBPF功能，建议补充以下配置：
 # 启用BPF JIT编译器（显著提升eBPF性能）
-CONFIG_KERNEL_BPF_JIT=y
-CONFIG_KERNEL_HAVE_BPF_JIT=y
+# CONFIG_KERNEL_BPF_JIT=y
+# CONFIG_KERNEL_HAVE_BPF_JIT=y
 # # 启用BPF LSM（可选，取决于daed是否使用）
 # CONFIG_KERNEL_SECURITY_BPF=y
 # # 启用BPF系统调用
