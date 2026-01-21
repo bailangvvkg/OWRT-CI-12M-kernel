@@ -147,25 +147,25 @@ CONFIG_PACKAGE_kmod-xdp-sockets-diag=y
 # 启用BPF JIT编译器（显著提升eBPF性能）
 CONFIG_KERNEL_BPF_JIT=y
 CONFIG_KERNEL_HAVE_BPF_JIT=y
-# 启用BPF LSM（可选，取决于daed是否使用）
-CONFIG_KERNEL_SECURITY_BPF=y
-# 启用BPF系统调用
-CONFIG_KERNEL_BPF_SYSCALL=y
-# 启用BPF挂载点
-CONFIG_KERNEL_BPF_LSM=y
-CONFIG_KERNEL_BPF_PRELOAD=y
-# 启用XDP支持（完整）
-CONFIG_KERNEL_XDP=y
-CONFIG_PACKAGE_kmod-ebpf-core=y
-CONFIG_PACKAGE_kmod-ebpf-filter=y
-CONFIG_PACKAGE_kmod-ebpf-testing=y
-# 启用libbpf库（用户空间eBPF支持）
-CONFIG_PACKAGE_libbpf=y
-CONFIG_PACKAGE_libbpf-dev=y
-# 启用cgroup相关BPF功能
-CONFIG_KERNEL_CGROUP_BPF=y
-CONFIG_KERNEL_CGROUP_NET_PRIO=y
-CONFIG_KERNEL_CGROUP_NET_CLASSID=y
+# # 启用BPF LSM（可选，取决于daed是否使用）
+# CONFIG_KERNEL_SECURITY_BPF=y
+# # 启用BPF系统调用
+# CONFIG_KERNEL_BPF_SYSCALL=y
+# # 启用BPF挂载点
+# CONFIG_KERNEL_BPF_LSM=y
+# CONFIG_KERNEL_BPF_PRELOAD=y
+# # 启用XDP支持（完整）
+# CONFIG_KERNEL_XDP=y
+# CONFIG_PACKAGE_kmod-ebpf-core=y
+# CONFIG_PACKAGE_kmod-ebpf-filter=y
+# CONFIG_PACKAGE_kmod-ebpf-testing=y
+# # 启用libbpf库（用户空间eBPF支持）
+# CONFIG_PACKAGE_libbpf=y
+# CONFIG_PACKAGE_libbpf-dev=y
+# # 启用cgroup相关BPF功能
+# CONFIG_KERNEL_CGROUP_BPF=y
+# CONFIG_KERNEL_CGROUP_NET_PRIO=y
+# CONFIG_KERNEL_CGROUP_NET_CLASSID=y
 EOF
 }
 cat_ebpf_config
