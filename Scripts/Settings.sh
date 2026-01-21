@@ -81,24 +81,91 @@ if [[ $WRT_TARGET != *"X86"* ]]; then
     # - -fipa-pta ：过程间指针分析，优化指针使用
     # - -fallow-store-data-races ：允许存储操作重排序，可能提高单线程性能
     # - -funsafe-loop-optimizations ：激进的循环优化，可能改变程序行为
-    echo "CONFIG_TARGET_OPTIMIZATION="-Ofast -pipe -flto -funroll-all-loops -fpeel-loops -ftree-vectorize -fgcse-after-reload -fipa-pta -fallow-store-data-races -funsafe-loop-optimizations -march=armv8-a+crypto+crc -mcpu=cortex-a53+crypto+crc -mtune=cortex-a53"" >> ./.config
+    # echo "CONFIG_TARGET_OPTIMIZATION="-Ofast -pipe -flto -funroll-all-loops -fpeel-loops -ftree-vectorize -fgcse-after-reload -fipa-pta -fallow-store-data-races -funsafe-loop-optimizations -march=armv8-a+crypto+crc -mcpu=cortex-a53+crypto+crc -mtune=cortex-a53"" >> ./.config
+    # 1. **向量优化**
+	# 	- `-mprefer-vector-width=128` - 优先使用128位向量宽度，充分利用Cortex-A53的NEON单元
+	# 2. **链接与符号优化**
+	# 	- `-fno-semantic-interposition` - 禁止语义插入，减少动态链接开销
+	# 	- `-fno-plt` - 禁止使用PLT（过程链接表），提高函数调用速度
+	# 3. **浮点优化**
+	# 	- `-ffp-contract=fast` - 快速浮点收缩，允许更多浮点表达式合并
+	# 	- `-ffinite-math-only` - 假设所有浮点运算结果都是有限的
+	# 	- `-fno-signed-zeros` - 忽略有符号零，允许更多优化
+	# 	- `-fno-trapping-math` - 假设浮点运算不会产生陷阱
+	# 	- `-fassociative-math` - 允许浮点运算重新关联
+	# 	- `-freciprocal-math` - 允许使用倒数近似值
+	# 	- `-fno-rounding-math` - 忽略舍入语义
+	# 	- `-fno-math-errno` - 禁用数学错误号，减少错误检查
+	# 4. **对齐优化**
+	# 	- `-falign-functions=32` - 函数对齐到32字节
+	# 	- `-falign-labels=32` - 标签对齐到32字节
+	# 	- `-falign-loops=32` - 循环对齐到32字节
+	# 	- `-falign-jumps=32` - 跳转对齐到32字节
+	# 5. **高级优化**
+	# 	- `-fdevirtualize-at-ltrans` - 在链接时转换阶段进行去虚拟化
+	# 	- `-fipa-cp-clone` - 过程间复制传播克隆
+	# 	- `-floop-interchange` - 循环交换，优化内存访问模式
+	# 	- `-floop-unroll-and-jam` - 循环展开和合并
+	# 	- `-floop-nest-optimize` - 循环嵌套优化
+	# 	- `-fgraphite-identity` - Graphite 身份优化
+	# 	- `-fopenmp-simd` - 启用 OpenMP SIMD 支持
+	# 6. **性能与安全性权衡**
+	# 	- `-mbranch-protection=none` - 禁用分支保护（提高性能但降低安全性）
+	# 	- `-fomit-frame-pointer` - 省略帧指针，释放一个通用寄存器
+	# 	- `-fno-unwind-tables` - 禁用 unwind 表
+	# 	- `-fno-asynchronous-unwind-tables` - 禁用异步 unwind 表
+	echo "CONFIG_TARGET_OPTIMIZATION="-Ofast -pipe -flto -funroll-all-loops -fpeel-loops -ftree-vectorize -fgcse-after-reload -fipa-pta -fallow-store-data-races -funsafe-loop-optimizations -march=armv8-a+crypto+crc -mcpu=cortex-a53+crypto+crc -mtune=cortex-a53 -mprefer-vector-width=128 -fno-semantic-interposition -ffp-contract=fast -falign-functions=32 -falign-labels=32 -falign-loops=32 -falign-jumps=32 -fdevirtualize-at-ltrans -fipa-cp-clone -fno-plt -mbranch-protection=none -fomit-frame-pointer -fno-unwind-tables -fno-asynchronous-unwind-tables -ffinite-math-only -fno-signed-zeros -fno-trapping-math -fassociative-math -freciprocal-math -fno-rounding-math -fno-math-errno -floop-interchange -floop-unroll-and-jam -floop-nest-optimize -fgraphite-identity -fopenmp-simd"" >> ./.config
 fi
 
 
 function cat_ebpf_config() {
 #ebpf相关
   cat >> .config <<EOF
-#eBPF
+# daed 推荐的 eBPF 配置
+# 开启开发模式，允许更多调试信息 可选，便于调试但增加固件体积
 CONFIG_DEVEL=y
+# 生成内核调试信息 可选，daed可能需要
 CONFIG_KERNEL_DEBUG_INFO=y
+# 不使用简化调试信息 配合DEBUG_INFO=y使用
 CONFIG_KERNEL_DEBUG_INFO_REDUCED=n
+# 开启BTF支持 必选 ，现代eBPF程序依赖BTF
 CONFIG_KERNEL_DEBUG_INFO_BTF=y
+开启cgroups支持 必选 ，cgroup BPF依赖
 CONFIG_KERNEL_CGROUPS=y
+# 开启cgroup BPF挂载点 必选 ，daed可能使用cgroup BPF
 CONFIG_KERNEL_CGROUP_BPF=y
+开启BPF事件支持 可选，用于BPF程序事件监控
 CONFIG_KERNEL_BPF_EVENTS=y
+# 使用主机BPF工具链 建议开启，提高编译效率
 CONFIG_BPF_TOOLCHAIN_HOST=y
+# 开启XDP套接字 必选 ，daed可能使用XDP加速
 CONFIG_KERNEL_XDP_SOCKETS=y
+# XDP套接字诊断模块 可选，用于调试XDP套接字
 CONFIG_PACKAGE_kmod-xdp-sockets-diag=y
+
+# 为了完整支持daed的eBPF功能，建议补充以下配置：
+# 启用BPF JIT编译器（显著提升eBPF性能）
+CONFIG_KERNEL_BPF_JIT=y
+CONFIG_KERNEL_HAVE_BPF_JIT=y
+# 启用BPF LSM（可选，取决于daed是否使用）
+CONFIG_KERNEL_SECURITY_BPF=y
+# 启用BPF系统调用
+CONFIG_KERNEL_BPF_SYSCALL=y
+# 启用BPF挂载点
+CONFIG_KERNEL_BPF_LSM=y
+CONFIG_KERNEL_BPF_PRELOAD=y
+# 启用XDP支持（完整）
+CONFIG_KERNEL_XDP=y
+CONFIG_PACKAGE_kmod-ebpf-core=y
+CONFIG_PACKAGE_kmod-ebpf-filter=y
+CONFIG_PACKAGE_kmod-ebpf-testing=y
+# 启用libbpf库（用户空间eBPF支持）
+CONFIG_PACKAGE_libbpf=y
+CONFIG_PACKAGE_libbpf-dev=y
+# 启用cgroup相关BPF功能
+CONFIG_KERNEL_CGROUP_BPF=y
+CONFIG_KERNEL_CGROUP_NET_PRIO=y
+CONFIG_KERNEL_CGROUP_NET_CLASSID=y
 EOF
 }
 cat_ebpf_config
@@ -215,3 +282,5 @@ echo "CONFIG_PACKAGE_coreutils-date=y" >> ./.config
 # 查看在线端
 # echo "CONFIG_PACKAGE_luci-app-serverchand=y" >> ./.config
 echo "CONFIG_PACKAGE_luci-app-pushbot=y" >> ./.config
+# 主题
+echo "CONFIG_PACKAGE_luci-app-argon-config=y" >> ./.config
