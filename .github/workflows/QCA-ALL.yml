@@ -6,7 +6,7 @@ name: QCA-ALL
 on:
   #自动编译：当Auto-Clean运行完成后
   workflow_run:
-    # workflows: ["Auto-Clean"]
+    workflows: ["Auto-Clean"]
     push:
     branches: [ main ]
     # types:
