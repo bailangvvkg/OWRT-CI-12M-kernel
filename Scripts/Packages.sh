@@ -121,6 +121,9 @@ UPDATE_VERSION "sing-box"
 #UPDATE_VERSION "tailscale"
 UPDATE_VERSION "docker"
 
+
+UPDATE_PACKAGE "luci-app-athena-led" "haipengno1/luci-app-athena-led" "main"
+
 # Git稀疏克隆，只克隆指定目录到本地
 function git_sparse_clone() {
 	branch="$1" repourl="$2" && shift 2
