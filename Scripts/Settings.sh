@@ -116,7 +116,7 @@ if [[ $WRT_TARGET != *"X86"* ]]; then
 	# 	- `-fno-unwind-tables` - 禁用 unwind 表
 	# 	- `-fno-asynchronous-unwind-tables` - 禁用异步 unwind 表
 	# echo "CONFIG_TARGET_OPTIMIZATION="-Ofast -pipe -flto -funroll-all-loops -fpeel-loops -ftree-vectorize -fgcse-after-reload -fipa-pta -fallow-store-data-races -funsafe-loop-optimizations -march=armv8-a+crypto+crc -mcpu=cortex-a53+crypto+crc -mtune=cortex-a53 -mprefer-vector-width=128 -fno-semantic-interposition -ffp-contract=fast -falign-functions=32 -falign-labels=32 -falign-loops=32 -falign-jumps=32 -fdevirtualize-at-ltrans -fipa-cp-clone -fno-plt -mbranch-protection=none -fomit-frame-pointer -fno-unwind-tables -fno-asynchronous-unwind-tables -ffinite-math-only -fno-signed-zeros -fno-trapping-math -fassociative-math -freciprocal-math -fno-rounding-math -fno-math-errno -floop-interchange -floop-unroll-and-jam -floop-nest-optimize -fgraphite-identity -fopenmp-simd"" >> ./.config
-	echo "CONFIG_TARGET_OPTIMIZATION="-Ofast -pipe -flto -funroll-all-loops -fpeel-loops -ftree-vectorize \
+    echo "CONFIG_TARGET_OPTIMIZATION="-Ofast -pipe -flto -funroll-all-loops -fpeel-loops -ftree-vectorize \
 -fgcse-after-reload -fipa-pta -fallow-store-data-races -funsafe-loop-optimizations \
 -march=armv8-a+crypto+crc -mcpu=cortex-a53+crypto+crc -mtune=cortex-a53 \
 -mprefer-vector-width=128 -fno-semantic-interposition -ffp-contract=fast \
@@ -134,15 +134,48 @@ function cat_ebpf_config() {
   cat >> .config <<EOF
 # eBPF
 CONFIG_DEVEL=y
+# 生成内核调试信息 可选，daed可能需要
 CONFIG_KERNEL_DEBUG_INFO=y
+# 不使用简化调试信息 配合DEBUG_INFO=y使用
 CONFIG_KERNEL_DEBUG_INFO_REDUCED=n
+# 开启BTF支持 必选 ，现代eBPF程序依赖BTF
 CONFIG_KERNEL_DEBUG_INFO_BTF=y
-CONFIG_KERNEL_CGROUPS=y
+# 开启cgroups支持 必选 ，cgroup BPF依赖
+CONFIG_KERNEL_CGROUPS=y1
+# 开启cgroup BPF挂载点 必选 ，daed可能使用cgroup BPF
 CONFIG_KERNEL_CGROUP_BPF=y
+# 开启BPF事件支持 可选，用于BPF程序事件监控
 CONFIG_KERNEL_BPF_EVENTS=y
+# 使用主机BPF工具链 建议开启，提高编译效率
 CONFIG_BPF_TOOLCHAIN_HOST=y
+# 开启XDP套接字 必选 ，daed可能使用XDP加速
 CONFIG_KERNEL_XDP_SOCKETS=y
+# XDP套接字诊断模块 可选，用于调试XDP套接字
 CONFIG_PACKAGE_kmod-xdp-sockets-diag=y
+
+# 为了完整支持daed的eBPF功能，建议补充以下配置：
+# 启用BPF JIT编译器（显著提升eBPF性能）
+CONFIG_KERNEL_BPF_JIT=y
+CONFIG_KERNEL_HAVE_BPF_JIT=y
+# # 启用BPF LSM（可选，取决于daed是否使用）
+# CONFIG_KERNEL_SECURITY_BPF=y
+# # 启用BPF系统调用
+# CONFIG_KERNEL_BPF_SYSCALL=y
+# # 启用BPF挂载点
+# CONFIG_KERNEL_BPF_LSM=y
+# CONFIG_KERNEL_BPF_PRELOAD=y
+# # 启用XDP支持（完整）
+# CONFIG_KERNEL_XDP=y
+# CONFIG_PACKAGE_kmod-ebpf-core=y
+# CONFIG_PACKAGE_kmod-ebpf-filter=y
+# CONFIG_PACKAGE_kmod-ebpf-testing=y
+# # 启用libbpf库（用户空间eBPF支持）
+# CONFIG_PACKAGE_libbpf=y
+# CONFIG_PACKAGE_libbpf-dev=y
+# # 启用cgroup相关BPF功能
+# CONFIG_KERNEL_CGROUP_BPF=y
+# CONFIG_KERNEL_CGROUP_NET_PRIO=y
+# CONFIG_KERNEL_CGROUP_NET_CLASSID=y
 EOF
 }
 cat_ebpf_config
