@@ -115,7 +115,17 @@ if [[ $WRT_TARGET != *"X86"* ]]; then
 	# 	- `-fomit-frame-pointer` - 省略帧指针，释放一个通用寄存器
 	# 	- `-fno-unwind-tables` - 禁用 unwind 表
 	# 	- `-fno-asynchronous-unwind-tables` - 禁用异步 unwind 表
-	echo "CONFIG_TARGET_OPTIMIZATION="-Ofast -pipe -flto -funroll-all-loops -fpeel-loops -ftree-vectorize -fgcse-after-reload -fipa-pta -fallow-store-data-races -funsafe-loop-optimizations -march=armv8-a+crypto+crc -mcpu=cortex-a53+crypto+crc -mtune=cortex-a53 -mprefer-vector-width=128 -fno-semantic-interposition -ffp-contract=fast -falign-functions=32 -falign-labels=32 -falign-loops=32 -falign-jumps=32 -fdevirtualize-at-ltrans -fipa-cp-clone -fno-plt -mbranch-protection=none -fomit-frame-pointer -fno-unwind-tables -fno-asynchronous-unwind-tables -ffinite-math-only -fno-signed-zeros -fno-trapping-math -fassociative-math -freciprocal-math -fno-rounding-math -fno-math-errno -floop-interchange -floop-unroll-and-jam -floop-nest-optimize -fgraphite-identity -fopenmp-simd"" >> ./.config
+	# echo "CONFIG_TARGET_OPTIMIZATION="-Ofast -pipe -flto -funroll-all-loops -fpeel-loops -ftree-vectorize -fgcse-after-reload -fipa-pta -fallow-store-data-races -funsafe-loop-optimizations -march=armv8-a+crypto+crc -mcpu=cortex-a53+crypto+crc -mtune=cortex-a53 -mprefer-vector-width=128 -fno-semantic-interposition -ffp-contract=fast -falign-functions=32 -falign-labels=32 -falign-loops=32 -falign-jumps=32 -fdevirtualize-at-ltrans -fipa-cp-clone -fno-plt -mbranch-protection=none -fomit-frame-pointer -fno-unwind-tables -fno-asynchronous-unwind-tables -ffinite-math-only -fno-signed-zeros -fno-trapping-math -fassociative-math -freciprocal-math -fno-rounding-math -fno-math-errno -floop-interchange -floop-unroll-and-jam -floop-nest-optimize -fgraphite-identity -fopenmp-simd"" >> ./.config
+	echo "CONFIG_TARGET_OPTIMIZATION="-Ofast -pipe -flto -funroll-all-loops -fpeel-loops -ftree-vectorize \
+-fgcse-after-reload -fipa-pta -fallow-store-data-races -funsafe-loop-optimizations \
+-march=armv8-a+crypto+crc -mcpu=cortex-a53+crypto+crc -mtune=cortex-a53 \
+-mprefer-vector-width=128 -fno-semantic-interposition -ffp-contract=fast \
+-falign-functions=32 -falign-labels=32 -falign-loops=32 -falign-jumps=32 \
+-fdevirtualize-at-ltrans -fipa-cp-clone -fno-plt -mbranch-protection=none \
+-fomit-frame-pointer -fno-unwind-tables -fno-asynchronous-unwind-tables \
+-ffinite-math-only -fno-signed-zeros -fno-trapping-math -fassociative-math \
+-freciprocal-math -fno-rounding-math -fno-math-errno -floop-interchange \
+-floop-unroll-and-jam -floop-nest-optimize -fgraphite-identity -fopenmp-simd"" >> ./.config
 fi
 
 
