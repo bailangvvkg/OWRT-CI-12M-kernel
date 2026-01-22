@@ -296,3 +296,5 @@ echo "CONFIG_PACKAGE_luci-app-pushbot=y" >> ./.config
 echo "CONFIG_PACKAGE_luci-app-argon-config=y" >> ./.config
 # PassWall
 echo "CONFIG_PACKAGE_luci-app-passwall=y" >> ./.config
+# luci-app-daed
+echo "CONFIG_PACKAGE_luci-app-daed=y" >> ./.config
