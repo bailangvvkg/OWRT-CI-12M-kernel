@@ -291,7 +291,8 @@ echo "CONFIG_PACKAGE_ss=y" >> ./.config
 echo "CONFIG_PACKAGE_coreutils-date=y" >> ./.config
 # 查看在线端
 # echo "CONFIG_PACKAGE_luci-app-serverchand=y" >> ./.config
-echo "CONFIG_PACKAGE_luci-app-pushbot=y" >> ./.config
+echo "CONFIG_PACKAGE_luci-app-wechatpush=y" >> ./.config
+# echo "CONFIG_PACKAGE_luci-app-pushbot=y" >> ./.config
 # 主题
 echo "CONFIG_PACKAGE_luci-app-argon-config=y" >> ./.config
 # PassWall
