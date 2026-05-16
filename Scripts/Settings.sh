@@ -316,3 +316,5 @@ echo "CONFIG_PACKAGE_luci-app-passwall=y" >> ./.config
 echo "CONFIG_PACKAGE_luci-app-daed=y" >> ./.config
 # luci-app-lanspeed
 echo "CONFIG_PACKAGE_luci-app-lanspeed=y" >> ./.config
+# 滚粗！内存固件
+echo "CONFIG_TARGET_ROOTFS_INITRAMFS=n" >> ./.config
