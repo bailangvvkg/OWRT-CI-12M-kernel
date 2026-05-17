@@ -198,17 +198,27 @@ cat_ebpf_config
 # BPFtool 支持 eBPF 程序 反汇编（disassembly）
 echo "CONFIG_PACKAGE_bpftool-full=y" >> ./.config
 
+# function set_kernel_size() {
+#   #修改jdc ax1800 pro 的内核大小为12M
+#   image_file='./target/linux/qualcommax/image/ipq60xx.mk'
+#   sed -i "/^define Device\/jdcloud_re-ss-01/,/^endef/ { /KERNEL_SIZE := 6144k/s//KERNEL_SIZE := 12288k/ }" $image_file
+#   sed -i "/^define Device\/jdcloud_re-cs-02/,/^endef/ { /KERNEL_SIZE := 6144k/s//KERNEL_SIZE := 12288k/ }" $image_file
+#   sed -i "/^define Device\/jdcloud_re-cs-07/,/^endef/ { /KERNEL_SIZE := 6144k/s//KERNEL_SIZE := 12288k/ }" $image_file
+#   sed -i "/^define Device\/redmi_ax5-jdcloud/,/^endef/ { /KERNEL_SIZE := 6144k/s//KERNEL_SIZE := 12288k/ }" $image_file
+#   sed -i "/^define Device\/linksys_mr/,/^endef/ { /KERNEL_SIZE := 8192k/s//KERNEL_SIZE := 12288k/ }" $image_file
+#   sed -i "/^define Device\/link_nn6000-v1/,/^endef/ { /KERNEL_SIZE := 6144k/s//KERNEL_SIZE := 12288k/ }" $image_file
+# }
+# set_kernel_size
+
+########################################
+# 修改内核大小
 function set_kernel_size() {
-  #修改jdc ax1800 pro 的内核大小为12M
-  image_file='./target/linux/qualcommax/image/ipq60xx.mk'
-  sed -i "/^define Device\/jdcloud_re-ss-01/,/^endef/ { /KERNEL_SIZE := 6144k/s//KERNEL_SIZE := 12288k/ }" $image_file
-  sed -i "/^define Device\/jdcloud_re-cs-02/,/^endef/ { /KERNEL_SIZE := 6144k/s//KERNEL_SIZE := 12288k/ }" $image_file
-  sed -i "/^define Device\/jdcloud_re-cs-07/,/^endef/ { /KERNEL_SIZE := 6144k/s//KERNEL_SIZE := 12288k/ }" $image_file
-  sed -i "/^define Device\/redmi_ax5-jdcloud/,/^endef/ { /KERNEL_SIZE := 6144k/s//KERNEL_SIZE := 12288k/ }" $image_file
-  sed -i "/^define Device\/linksys_mr/,/^endef/ { /KERNEL_SIZE := 8192k/s//KERNEL_SIZE := 12288k/ }" $image_file
-  sed -i "/^define Device\/link_nn6000-v1/,/^endef/ { /KERNEL_SIZE := 6144k/s//KERNEL_SIZE := 12288k/ }" $image_file
+  for file in target/linux/qualcommax/image/*.mk; do
+    sed -i 's/KERNEL_SIZE := [0-9]*k/KERNEL_SIZE := 12288k/g' "$file"
+  done
 }
 set_kernel_size
+########################################
 
 # #修复dropbear
 sed -i "s/Interface/DirectInterface/" ./package/network/services/dropbear/files/dropbear.config
