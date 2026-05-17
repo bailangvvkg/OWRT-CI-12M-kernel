@@ -147,7 +147,7 @@ CONFIG_KERNEL_DEBUG_INFO_REDUCED=n
 # 开启BTF支持 必选 ，现代eBPF程序依赖BTF
 CONFIG_KERNEL_DEBUG_INFO_BTF=y
 # 开启cgroups支持 必选 ，cgroup BPF依赖
-CONFIG_KERNEL_CGROUPS=y1
+CONFIG_KERNEL_CGROUPS=y
 # 开启cgroup BPF挂载点 必选 ，daed可能使用cgroup BPF
 CONFIG_KERNEL_CGROUP_BPF=y
 # 开启BPF事件支持 可选，用于BPF程序事件监控
@@ -183,12 +183,7 @@ CONFIG_KERNEL_HAVE_BPF_JIT=y
 # CONFIG_KERNEL_CGROUP_NET_PRIO=y
 # CONFIG_KERNEL_CGROUP_NET_CLASSID=y
 
-# Lanspeed
-# CONFIG_DEVEL=y
-# CONFIG_KERNEL_DEBUG_INFO=y
-# CONFIG_KERNEL_DEBUG_INFO_BTF=y
-# CONFIG_KERNEL_BPF_EVENTS=y
-# CONFIG_BPF_TOOLCHAIN_HOST=y
+# Lanspeed 内核依赖 (eBPF已在上面设置)
 CONFIG_PACKAGE_kmod-nf-conntrack=y
 CONFIG_PACKAGE_kmod-nf-conntrack-netlink=y
 EOF
@@ -287,6 +282,8 @@ echo "CONFIG_PACKAGE_luci-app-gost=y" >> ./.config
 # Git
 echo "CONFIG_PACKAGE_git-http=y" >> ./.config
 # Nginx替换Uhttpd
+echo "CONFIG_PACKAGE_nginx-ssl=y" >> ./.config
+echo "CONFIG_PACKAGE_luci-nginx=y" >> ./.config
 echo "CONFIG_PACKAGE_nginx-mod-luci=y" >> ./.config
 # Nginx的图形化界面
 echo "CONFIG_PACKAGE_luci-app-nginx=y" >> ./.config
@@ -325,6 +322,7 @@ echo "CONFIG_PACKAGE_luci-app-passwall=y" >> ./.config
 # luci-app-daed
 echo "CONFIG_PACKAGE_luci-app-daed=y" >> ./.config
 # luci-app-lanspeed
+echo "CONFIG_PACKAGE_lanspeedd=y" >> ./.config
 echo "CONFIG_PACKAGE_luci-app-lanspeed=y" >> ./.config
 # 滚粗！内存固件
 echo "CONFIG_TARGET_ROOTFS_INITRAMFS=n" >> ./.config

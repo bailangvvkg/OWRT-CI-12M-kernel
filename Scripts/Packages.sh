@@ -186,4 +186,11 @@ rm -rf feeds/luci/applications/luci-app-passwall
 git clone https://github.com/Openwrt-Passwall/openwrt-passwall package/passwall-luci
 
 # Lanspeed
-git clone https://github.com/qimaoww/luci-app-lanspeed.git package/lanspeed
+# 改前
+# git clone https://github.com/qimaoww/luci-app-lanspeed.git package/lanspeed
+
+# 改后：直接将 applications 和 net 子目录放到正确位置
+git clone https://github.com/qimaoww/luci-app-lanspeed.git /tmp/lanspeed-feed
+cp -r /tmp/lanspeed-feed/applications/luci-app-lanspeed package/luci-app-lanspeed
+cp -r /tmp/lanspeed-feed/net/lanspeedd package/lanspeedd
+rm -rf /tmp/lanspeed-feed
