@@ -328,3 +328,5 @@ echo "CONFIG_PACKAGE_luci-app-lanspeed=y" >> ./.config
 echo "CONFIG_TARGET_ROOTFS_INITRAMFS=n" >> ./.config
 # 把 二进制数据 转成 可读的十六进制字符串 的
 echo "CONFIG_PACKAGE_coreutils-od=y" >> ./.config
+# Mosdns
+echo "CONFIG_PACKAGE_luci-app-mosdns=y" >> ./.config
