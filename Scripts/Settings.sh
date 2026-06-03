@@ -304,7 +304,7 @@ echo "CONFIG_PACKAGE_zoneinfo-all=y" >> ./.config
 # Caddy
 # echo "CONFIG_PACKAGE_luci-app-caddy=y" >> ./.config
 # Openssl
-# echo "CONFIG_PACKAGE_openssl-util=y" >> ./.config
+echo "CONFIG_PACKAGE_openssl-util=y" >> ./.config
 # dig命令
 echo "CONFIG_PACKAGE_bind-dig=y" >> ./.config
 # ss 网络抓包工具
