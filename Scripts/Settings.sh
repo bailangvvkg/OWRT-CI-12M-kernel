@@ -261,6 +261,7 @@ echo "CONFIG_PACKAGE_cfdisk=y" >> ./.config
 # docker(只能集成)
 echo "CONFIG_PACKAGE_luci-app-dockerman=y" >> ./.config
 # Podman
+echo "CONFIG_PACKAGE_podman=y" >> ./.config
 echo "CONFIG_PACKAGE_luci-app-podman=y" >> ./.config
 # qBittorrent
 # echo "CONFIG_PACKAGE_luci-app-qbittorrent=y" >> ./.config
@@ -283,6 +284,8 @@ echo "CONFIG_PACKAGE_luci-app-gost=y" >> ./.config
 echo "CONFIG_PACKAGE_git-http=y" >> ./.config
 # Nginx替换Uhttpd
 echo "CONFIG_PACKAGE_nginx-ssl=y" >> ./.config
+echo "CONFIG_NGINX_PCRE=y" >> ./.config
+echo "CONFIG_PACKAGE_nginx-ssl-util=y" >> ./.config
 echo "CONFIG_PACKAGE_luci-nginx=y" >> ./.config
 echo "CONFIG_PACKAGE_nginx-mod-luci=y" >> ./.config
 # Nginx的图形化界面

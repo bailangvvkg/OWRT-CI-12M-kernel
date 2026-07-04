@@ -130,26 +130,162 @@ fi
 
 # Git稀疏克隆，只克隆指定目录到本地
 function git_sparse_clone() {
+	local PACKAGE_DIR
 	branch="$1" repourl="$2" && shift 2
+	PACKAGE_DIR=$(PACKAGE_WORK_DIR)
+
 	git clone --recursive --depth=1 -b $branch --single-branch --filter=blob:none --sparse $repourl
 	repodir=$(echo $repourl | awk -F '/' '{print $(NF)}')
 	cd $repodir && git sparse-checkout set $@
-	mv -f $@ ../package
+	mkdir -p "../$PACKAGE_DIR"
+	mv -f $@ "../$PACKAGE_DIR"
 	cd .. && rm -rf $repodir
 }
 
+OPENWRT_ROOT_DIR() {
+	if [ -x "./scripts/feeds" ] && [ -d "./package" ]; then
+		echo "."
+	elif [ -x "../scripts/feeds" ] && [ -d "../package" ]; then
+		echo ".."
+	else
+		echo "."
+	fi
+}
+
+PACKAGE_WORK_DIR() {
+	local ROOT_DIR
+	ROOT_DIR=$(OPENWRT_ROOT_DIR)
+
+	if [ "$ROOT_DIR" = "." ]; then
+		echo "./package"
+	else
+		echo "."
+	fi
+}
+
+RUN_FEEDS_INSTALL() {
+	local ROOT_DIR
+	ROOT_DIR=$(OPENWRT_ROOT_DIR)
+
+	(cd "$ROOT_DIR" && ./scripts/feeds install -a)
+}
+
+FEEDS_WORK_DIR() {
+	local ROOT_DIR
+	ROOT_DIR=$(OPENWRT_ROOT_DIR)
+
+	echo "$ROOT_DIR/feeds"
+}
+
+git_package_clone() {
+	local REPO_URL=$1
+	local TARGET_NAME=$2
+	local PACKAGE_DIR
+
+	PACKAGE_DIR=$(PACKAGE_WORK_DIR)
+	git clone "$REPO_URL" "$PACKAGE_DIR/$TARGET_NAME"
+}
+
+UPDATE_PODMAN() {
+	local PODMAN_REPO="https://github.com/Zerogiven-OpenWRT-Packages/luci-app-podman.git"
+	local PACKAGE_DIR
+	local TARGET_DIR
+
+	PACKAGE_DIR=$(PACKAGE_WORK_DIR)
+	TARGET_DIR="$PACKAGE_DIR/luci-app-podman"
+
+	rm -rf "$TARGET_DIR"
+	if ! git clone --depth 1 --single-branch --recursive "$PODMAN_REPO" "$TARGET_DIR"; then
+		return 1
+	fi
+
+	if [ ! -f "$TARGET_DIR/Makefile" ]; then
+		echo "luci-app-podman Makefile not found: $TARGET_DIR/Makefile" >&2
+		return 1
+	fi
+}
+
+UPDATE_LANSPEED() {
+	local LANSPEED_REPO="https://github.com/qimaoww/luci-app-lanspeed.git"
+	local PACKAGE_DIR
+	local TMP_DIR
+
+	PACKAGE_DIR=$(PACKAGE_WORK_DIR)
+	TMP_DIR=$(mktemp -d)
+
+	rm -rf "$PACKAGE_DIR/luci-app-lanspeed" "$PACKAGE_DIR/lanspeedd"
+	if ! git clone --depth 1 --single-branch "$LANSPEED_REPO" "$TMP_DIR"; then
+		rm -rf "$TMP_DIR"
+		return 1
+	fi
+
+	if [ ! -f "$TMP_DIR/applications/luci-app-lanspeed/Makefile" ]; then
+		echo "luci-app-lanspeed Makefile not found in $LANSPEED_REPO" >&2
+		rm -rf "$TMP_DIR"
+		return 1
+	fi
+
+	if [ ! -f "$TMP_DIR/net/lanspeedd/Makefile" ]; then
+		echo "lanspeedd Makefile not found in $LANSPEED_REPO" >&2
+		rm -rf "$TMP_DIR"
+		return 1
+	fi
+
+	cp -rf "$TMP_DIR/applications/luci-app-lanspeed" "$PACKAGE_DIR/luci-app-lanspeed"
+	cp -rf "$TMP_DIR/net/lanspeedd" "$PACKAGE_DIR/lanspeedd"
+	rm -rf "$TMP_DIR"
+}
+
 # 拉取Lucky最新版的源码
-git clone https://github.com/sirpdboy/luci-app-lucky.git package/lucky
-# git clone https://github.com/gdy666/luci-app-lucky package/lucky
+UPDATE_LUCKY() {
+	local LUCKY_REPO="https://github.com/gdy666/luci-app-lucky.git"
+	local PACKAGE_DIR
+	local TMP_DIR
+
+	PACKAGE_DIR=$(PACKAGE_WORK_DIR)
+
+	echo "Pull latest lucky from $LUCKY_REPO"
+	rm -rf "$PACKAGE_DIR/lucky" "$PACKAGE_DIR/luci-app-lucky"
+	find ../feeds/luci ../feeds/packages ./feeds/luci ./feeds/packages \
+		-maxdepth 4 -type d \( -name "lucky" -o -name "luci-app-lucky" \) \
+		-prune -exec rm -rf {} + 2>/dev/null || true
+
+	TMP_DIR=$(mktemp -d)
+	if ! git clone --depth=1 --filter=blob:none --no-checkout "$LUCKY_REPO" "$TMP_DIR"; then
+		rm -rf "$TMP_DIR"
+		return 1
+	fi
+
+	if ! (
+		cd "$TMP_DIR" || exit 1
+		git sparse-checkout init --cone
+		git sparse-checkout set luci-app-lucky lucky
+		git checkout --quiet
+	); then
+		rm -rf "$TMP_DIR"
+		return 1
+	fi
+
+	cp -rf "$TMP_DIR/luci-app-lucky" "$PACKAGE_DIR/luci-app-lucky"
+	cp -rf "$TMP_DIR/lucky" "$PACKAGE_DIR/lucky"
+	rm -rf "$TMP_DIR"
+
+	if [ -f "$PACKAGE_DIR/lucky/files/luckyuci" ]; then
+		sed -i "s/option enabled '1'/option enabled '0'/g" "$PACKAGE_DIR/lucky/files/luckyuci"
+		sed -i "s/option logger '1'/option logger '0'/g" "$PACKAGE_DIR/lucky/files/luckyuci"
+	fi
+}
+
+UPDATE_LUCKY || exit 1
 
 #删除官方的默认插件
 # rm -rf ../feeds/luci/applications/luci-app-{passwall*,mosdns,dockerman,dae*,bypass*}
 # rm -rf ../feeds/packages/net/{shadowsocks-rust,shadowsocksr-libev,xray*,v2ray*,dae*,sing-box,geoview}
-rm -rf ../feeds/luci/applications/luci-app-{dae*}
-rm -rf ../feeds/packages/net/{dae*}
+rm -rf "$(FEEDS_WORK_DIR)"/luci/applications/luci-app-dae*
+rm -rf "$(FEEDS_WORK_DIR)"/packages/net/dae*
 
 # QiuSimons luci-app-daed
-git clone https://github.com/QiuSimons/luci-app-daed package/dae
+git_package_clone https://github.com/QiuSimons/luci-app-daed dae
 mkdir -p Package/libcron && wget -O Package/libcron/Makefile https://raw.githubusercontent.com/immortalwrt/packages/refs/heads/master/libs/libcron/Makefile
 
 # # luci-app-daed-next
@@ -163,34 +299,81 @@ git_sparse_clone main https://github.com/kiddin9/kwrt-packages natter2 luci-app-
 git_sparse_clone main https://github.com/kiddin9/kwrt-packages luci-app-dockerman luci-app-docker docker-lan-bridge dockerd
 
 # git clone --depth 1 --single-branch https://github.com/breeze303/openwrt-podman package/podman
-git clone --depth 1 --single-branch --recursive https://github.com/Zerogiven-OpenWRT-Packages/luci-app-podman package/luci-app-podman
-./scripts/feeds install -a
+UPDATE_PODMAN || exit 1
+RUN_FEEDS_INSTALL || exit 1
 
-# wget "https://alist.lovelyy.eu.org/d/CloudFlareR2/immortalwrt/nginx/ngnx.conf?sign=FN_uiyymuja-Aj1z4I4Pevn3arIZXBdslq8Zjd_akdo=:0" -O ../feeds/packages/net/nginx-util/files/nginx.config
-wget "https://r2.lovelyy.eu.org/raw/immortalwrt/nginx/ngnx.conf" -O ../feeds/packages/net/nginx-util/files/nginx.config
-# echo 检测一下nginx的配置文件
-# cat ../feeds/packages/net/nginx-util/files/nginx.config
+PATCH_NGINX() {
+	local ROOT_DIR
+	local NGINX_UTIL_DIR
+	local NGINX_CONFIG
+	local UCI_TEMPLATE
+	local UCI_DEFAULTS_DIR
+	local UCI_DEFAULTS_FILE
+	local NGINX_CONFIG_URL="https://r2.lovelyy.eu.org/raw/immortalwrt/nginx/ngnx.conf"
 
-# sed -i 's/^large_client_header_buffers .*/large_client_header_buffers 8 32k;/' ../feeds/packages/net/nginx-util/files/uci.conf.template
-# 检测一下nginx包头是否由2个K改成8个32K
-cat ../feeds/packages/net/nginx-util/files/uci.conf.template
+	ROOT_DIR=$(OPENWRT_ROOT_DIR)
+	NGINX_UTIL_DIR="$ROOT_DIR/feeds/packages/net/nginx-util"
+	NGINX_CONFIG="$NGINX_UTIL_DIR/files/nginx.config"
+	UCI_TEMPLATE="$NGINX_UTIL_DIR/files/uci.conf.template"
+	UCI_DEFAULTS_DIR="$ROOT_DIR/package/base-files/files/etc/uci-defaults"
+	UCI_DEFAULTS_FILE="$UCI_DEFAULTS_DIR/99-nginx-large-client-header"
+
+	if [ ! -d "$NGINX_UTIL_DIR/files" ]; then
+		echo "nginx-util files directory not found: $NGINX_UTIL_DIR/files" >&2
+		return 1
+	fi
+
+	echo "Patch nginx config: $NGINX_CONFIG"
+	if ! wget -O "$NGINX_CONFIG" "$NGINX_CONFIG_URL" || [ ! -s "$NGINX_CONFIG" ]; then
+		echo "nginx config download failed: $NGINX_CONFIG_URL" >&2
+		return 1
+	fi
+
+	if ! grep -q "large_client_header_buffers.*8 32k" "$NGINX_CONFIG"; then
+		echo "nginx config patch missing large_client_header_buffers: $NGINX_CONFIG" >&2
+		return 1
+	fi
+
+	if [ -f "$UCI_TEMPLATE" ]; then
+		sed -i 's/^[[:space:]]*large_client_header_buffers .*/large_client_header_buffers 8 32k;/' "$UCI_TEMPLATE"
+	else
+		echo "nginx uci template not found: $UCI_TEMPLATE" >&2
+		return 1
+	fi
+
+	if ! grep -q "large_client_header_buffers 8 32k;" "$UCI_TEMPLATE"; then
+		echo "nginx uci template patch failed: $UCI_TEMPLATE" >&2
+		return 1
+	fi
+
+	mkdir -p "$UCI_DEFAULTS_DIR"
+cat >"$UCI_DEFAULTS_FILE" <<'EOF'
+#!/bin/sh
+
+uci -q get nginx._lan >/dev/null || uci set nginx._lan='server'
+uci -q set nginx._lan.large_client_header_buffers='8 32k'
+uci -q set nginx._lan.client_max_body_size='128M'
+uci -q commit nginx
+
+if [ -f /etc/nginx/uci.conf.template ]; then
+	sed -i 's/^[[:space:]]*large_client_header_buffers .*/large_client_header_buffers 8 32k;/' /etc/nginx/uci.conf.template
+fi
+
+exit 0
+EOF
+	chmod +x "$UCI_DEFAULTS_FILE"
+}
+
+PATCH_NGINX || exit 1
 
 # 查看在线端
-git clone https://github.com/zzsj0928/luci-app-pushbot package/luci-app-pushbot
+git_package_clone https://github.com/zzsj0928/luci-app-pushbot luci-app-pushbot
 
 # 移除 openwrt feeds 自带的核心库
-rm -rf feeds/packages/net/{xray-core,v2ray-geodata,sing-box,chinadns-ng,dns2socks,hysteria,ipt2socks,microsocks,naiveproxy,shadowsocks-libev,shadowsocks-rust,shadowsocksr-libev,simple-obfs,tcping,trojan-plus,tuic-client,v2ray-plugin,xray-plugin,geoview,shadow-tls}
-git clone https://github.com/Openwrt-Passwall/openwrt-passwall-packages package/passwall-packages
+rm -rf "$(FEEDS_WORK_DIR)"/packages/net/{xray-core,v2ray-geodata,sing-box,chinadns-ng,dns2socks,hysteria,ipt2socks,microsocks,naiveproxy,shadowsocks-libev,shadowsocks-rust,shadowsocksr-libev,simple-obfs,tcping,trojan-plus,tuic-client,v2ray-plugin,xray-plugin,geoview,shadow-tls}
+git_package_clone https://github.com/Openwrt-Passwall/openwrt-passwall-packages passwall-packages
 # 移除 openwrt feeds 过时的luci版本
-rm -rf feeds/luci/applications/luci-app-passwall
-git clone https://github.com/Openwrt-Passwall/openwrt-passwall package/passwall-luci
+rm -rf "$(FEEDS_WORK_DIR)"/luci/applications/luci-app-passwall
+git_package_clone https://github.com/Openwrt-Passwall/openwrt-passwall passwall-luci
 
-# Lanspeed
-# 改前
-# git clone https://github.com/qimaoww/luci-app-lanspeed.git package/lanspeed
-
-# 改后：直接将 applications 和 net 子目录放到正确位置
-git clone https://github.com/qimaoww/luci-app-lanspeed.git /tmp/lanspeed-feed
-cp -r /tmp/lanspeed-feed/applications/luci-app-lanspeed package/luci-app-lanspeed
-cp -r /tmp/lanspeed-feed/net/lanspeedd package/lanspeedd
-rm -rf /tmp/lanspeed-feed
+UPDATE_LANSPEED || exit 1
