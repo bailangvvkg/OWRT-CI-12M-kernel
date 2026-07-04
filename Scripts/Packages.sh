@@ -128,39 +128,51 @@ if [ -f "$GITHUB_WORKSPACE/Scripts/PRIVATE.sh" ]; then
 	source "$GITHUB_WORKSPACE/Scripts/PRIVATE.sh"
 fi
 
+SCRIPT_RUN_DIR=$(pwd)
+if [ -x "$SCRIPT_RUN_DIR/scripts/feeds" ] && [ -d "$SCRIPT_RUN_DIR/package" ]; then
+	OPENWRT_ROOT="$SCRIPT_RUN_DIR"
+	OPENWRT_PACKAGE_DIR="$SCRIPT_RUN_DIR/package"
+elif [ -x "$SCRIPT_RUN_DIR/../scripts/feeds" ] && [ -d "$SCRIPT_RUN_DIR/../package" ]; then
+	OPENWRT_ROOT=$(cd "$SCRIPT_RUN_DIR/.." && pwd)
+	OPENWRT_PACKAGE_DIR="$SCRIPT_RUN_DIR"
+else
+	echo "OpenWrt root not found from $SCRIPT_RUN_DIR" >&2
+	exit 1
+fi
+
 # Git稀疏克隆，只克隆指定目录到本地
 function git_sparse_clone() {
 	local PACKAGE_DIR
+	local REPO_DIR
 	branch="$1" repourl="$2" && shift 2
 	PACKAGE_DIR=$(PACKAGE_WORK_DIR)
+	REPO_DIR=$(basename "$repourl")
 
-	git clone --recursive --depth=1 -b $branch --single-branch --filter=blob:none --sparse $repourl
-	repodir=$(echo $repourl | awk -F '/' '{print $(NF)}')
-	cd $repodir && git sparse-checkout set $@
-	mkdir -p "../$PACKAGE_DIR"
-	mv -f $@ "../$PACKAGE_DIR"
-	cd .. && rm -rf $repodir
+	rm -rf "$REPO_DIR"
+	if ! git clone --recursive --depth=1 -b "$branch" --single-branch --filter=blob:none --sparse "$repourl" "$REPO_DIR"; then
+		rm -rf "$REPO_DIR"
+		return 1
+	fi
+
+	if ! (
+		cd "$REPO_DIR" || exit 1
+		git sparse-checkout set "$@"
+		mkdir -p "$PACKAGE_DIR"
+		mv -f "$@" "$PACKAGE_DIR"
+	); then
+		rm -rf "$REPO_DIR"
+		return 1
+	fi
+
+	rm -rf "$REPO_DIR"
 }
 
 OPENWRT_ROOT_DIR() {
-	if [ -x "./scripts/feeds" ] && [ -d "./package" ]; then
-		echo "."
-	elif [ -x "../scripts/feeds" ] && [ -d "../package" ]; then
-		echo ".."
-	else
-		echo "."
-	fi
+	echo "$OPENWRT_ROOT"
 }
 
 PACKAGE_WORK_DIR() {
-	local ROOT_DIR
-	ROOT_DIR=$(OPENWRT_ROOT_DIR)
-
-	if [ "$ROOT_DIR" = "." ]; then
-		echo "./package"
-	else
-		echo "."
-	fi
+	echo "$OPENWRT_PACKAGE_DIR"
 }
 
 RUN_FEEDS_INSTALL() {
@@ -171,10 +183,7 @@ RUN_FEEDS_INSTALL() {
 }
 
 FEEDS_WORK_DIR() {
-	local ROOT_DIR
-	ROOT_DIR=$(OPENWRT_ROOT_DIR)
-
-	echo "$ROOT_DIR/feeds"
+	echo "$OPENWRT_ROOT/feeds"
 }
 
 git_package_clone() {
@@ -293,10 +302,10 @@ mkdir -p Package/libcron && wget -O Package/libcron/Makefile https://raw.githubu
 
 git_sparse_clone main https://github.com/kenzok8/small-package daed-next luci-app-daed-next gost luci-app-gost luci-app-adguardhome
 
-git_sparse_clone main https://github.com/kiddin9/kwrt-packages natter2 luci-app-natter2 luci-app-cloudflarespeedtest luci-app-caddy openwrt-caddy luci-app-nginx-ha luci-app-nginx-manager luci-nginxer luci-app-nginx luci-app-wechatpush
+git_sparse_clone main https://github.com/kiddin9/kwrt-packages natter2 luci-app-natter2 luci-app-cloudflarespeedtest luci-app-caddy openwrt-caddy luci-app-nginx-ha luci-app-nginx-manager luci-nginxer luci-app-nginx luci-app-wechatpush || exit 1
 
 # docker
-git_sparse_clone main https://github.com/kiddin9/kwrt-packages luci-app-dockerman luci-app-docker docker-lan-bridge dockerd
+git_sparse_clone main https://github.com/kiddin9/kwrt-packages luci-app-dockerman luci-app-docker docker-lan-bridge dockerd || exit 1
 
 # git clone --depth 1 --single-branch https://github.com/breeze303/openwrt-podman package/podman
 UPDATE_PODMAN || exit 1
