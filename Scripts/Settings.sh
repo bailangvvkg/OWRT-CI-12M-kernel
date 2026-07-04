@@ -290,7 +290,6 @@ echo "CONFIG_PACKAGE_luci-nginx=y" >> ./.config
 echo "CONFIG_PACKAGE_nginx-mod-luci=y" >> ./.config
 # Nginx的图形化界面
 echo "CONFIG_PACKAGE_luci-app-nginx-manager=y" >> ./.config
-echo "CONFIG_PACKAGE_luci-app-nginx=y" >> ./.config
 # HAProxy 比Nginx更强大的反向代理服务器
 # echo "CONFIG_PACKAGE_luci-app-haproxy-tcp=y" >> ./.config
 # Adguardhome去广告
