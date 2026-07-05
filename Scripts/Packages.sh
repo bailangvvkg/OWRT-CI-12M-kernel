@@ -189,16 +189,24 @@ FEEDS_WORK_DIR() {
 git_package_clone() {
 	local REPO_URL=$1
 	local TARGET_NAME=$2
+	local REPO_BRANCH=${3:-}
 	local PACKAGE_DIR
 
 	PACKAGE_DIR=$(PACKAGE_WORK_DIR)
-	git clone "$REPO_URL" "$PACKAGE_DIR/$TARGET_NAME"
+	rm -rf "$PACKAGE_DIR/$TARGET_NAME"
+	if [ -n "$REPO_BRANCH" ]; then
+		git clone --depth 1 --single-branch --branch "$REPO_BRANCH" "$REPO_URL" "$PACKAGE_DIR/$TARGET_NAME"
+	else
+		git clone "$REPO_URL" "$PACKAGE_DIR/$TARGET_NAME"
+	fi
 }
 
 PATCH_DAED() {
 	local DAED_MAKEFILE
+	local DAED_INIT
 
 	DAED_MAKEFILE="$(PACKAGE_WORK_DIR)/dae/daed/Makefile"
+	DAED_INIT="$(PACKAGE_WORK_DIR)/dae/luci-app-daed/root/etc/init.d/luci_daed"
 	if [ ! -f "$DAED_MAKEFILE" ]; then
 		echo "daed Makefile not found: $DAED_MAKEFILE" >&2
 		return 1
@@ -206,21 +214,38 @@ PATCH_DAED() {
 
 	awk '
 	{
+		if ($0 ~ /^define Build\/Compile$/) {
+			in_compile = 1
+		}
 		if ($0 ~ /GOFLAGS="-trimpath -buildvcs=false -pgo=auto"/) {
 			sub(/GOFLAGS="-trimpath -buildvcs=false -pgo=auto"/, "GOFLAGS=\"-mod=mod -trimpath -buildvcs=false -pgo=auto\"")
 		}
-		if ($0 ~ /^[[:space:]]*go generate \.\/\.\.\. ; \\$/) {
+		if ($0 ~ /^[[:space:]]*git clone https:\/\/github.com\/daeuniverse\/dae-wing \$\(PKG_BUILD_DIR\) && \\$/) {
+			print "\t\trm -rf $(PKG_BUILD_DIR) ; \\"
+		}
+		if ($0 ~ /^[[:space:]]*pnpm install ; \\$/) {
+			sub(/pnpm install ; \\/, "pnpm install --no-frozen-lockfile ; \\")
+		}
+		gsub(/github.com\/daeuniverse\/quic-go/, "github.com/olicesx/quic-go")
+		if (in_compile && $0 ~ /^[[:space:]]*go generate \.\/\.\.\. ; \\$/) {
 			print "\t\tgo mod tidy ; \\"
 		}
 		print
-		if ($0 ~ /^[[:space:]]*pushd \$\(PKG_BUILD_DIR\) ; \\$/) {
+		if (in_compile && $0 ~ /^[[:space:]]*pushd \$\(PKG_BUILD_DIR\) ; \\$/) {
 			print "\t\tset -e ; \\"
 		}
-		if ($0 ~ /^[[:space:]]*cd dae-core ; \\$/) {
+		if (in_compile && $0 ~ /^[[:space:]]*cd dae-core ; \\$/) {
 			print "\t\tgo mod tidy ; \\"
+		}
+		if ($0 ~ /^endef$/ && in_compile) {
+			in_compile = 0
 		}
 	}
 	' "$DAED_MAKEFILE" >"$DAED_MAKEFILE.tmp" && mv "$DAED_MAKEFILE.tmp" "$DAED_MAKEFILE"
+
+	if [ -f "$DAED_INIT" ]; then
+		sed -i 's|/run/i\\  procd_set_param|/procd_set_param command/i \\\tprocd_set_param|g' "$DAED_INIT"
+	fi
 }
 
 UPDATE_PODMAN() {
@@ -322,7 +347,7 @@ rm -rf "$(FEEDS_WORK_DIR)"/luci/applications/luci-app-dae*
 rm -rf "$(FEEDS_WORK_DIR)"/packages/net/dae*
 
 # QiuSimons luci-app-daed
-git_package_clone https://github.com/QiuSimons/luci-app-daed dae
+git_package_clone https://github.com/QiuSimons/luci-app-daed dae kix
 PATCH_DAED || exit 1
 mkdir -p Package/libcron && wget -O Package/libcron/Makefile https://raw.githubusercontent.com/immortalwrt/packages/refs/heads/master/libs/libcron/Makefile
 
