@@ -195,6 +195,34 @@ git_package_clone() {
 	git clone "$REPO_URL" "$PACKAGE_DIR/$TARGET_NAME"
 }
 
+PATCH_DAED() {
+	local DAED_MAKEFILE
+
+	DAED_MAKEFILE="$(PACKAGE_WORK_DIR)/dae/daed/Makefile"
+	if [ ! -f "$DAED_MAKEFILE" ]; then
+		echo "daed Makefile not found: $DAED_MAKEFILE" >&2
+		return 1
+	fi
+
+	awk '
+	{
+		if ($0 ~ /GOFLAGS="-trimpath -buildvcs=false -pgo=auto"/) {
+			sub(/GOFLAGS="-trimpath -buildvcs=false -pgo=auto"/, "GOFLAGS=\"-mod=mod -trimpath -buildvcs=false -pgo=auto\"")
+		}
+		if ($0 ~ /^[[:space:]]*go generate \.\/\.\.\. ; \\$/) {
+			print "\t\tgo mod tidy ; \\"
+		}
+		print
+		if ($0 ~ /^[[:space:]]*pushd \$\(PKG_BUILD_DIR\) ; \\$/) {
+			print "\t\tset -e ; \\"
+		}
+		if ($0 ~ /^[[:space:]]*cd dae-core ; \\$/) {
+			print "\t\tgo mod tidy ; \\"
+		}
+	}
+	' "$DAED_MAKEFILE" >"$DAED_MAKEFILE.tmp" && mv "$DAED_MAKEFILE.tmp" "$DAED_MAKEFILE"
+}
+
 UPDATE_PODMAN() {
 	local PODMAN_REPO="https://github.com/Zerogiven-OpenWRT-Packages/luci-app-podman.git"
 	local PACKAGE_DIR
@@ -295,6 +323,7 @@ rm -rf "$(FEEDS_WORK_DIR)"/packages/net/dae*
 
 # QiuSimons luci-app-daed
 git_package_clone https://github.com/QiuSimons/luci-app-daed dae
+PATCH_DAED || exit 1
 mkdir -p Package/libcron && wget -O Package/libcron/Makefile https://raw.githubusercontent.com/immortalwrt/packages/refs/heads/master/libs/libcron/Makefile
 
 # # luci-app-daed-next
