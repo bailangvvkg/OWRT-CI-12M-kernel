@@ -140,8 +140,10 @@ jobs:
         uses: easimon/maximize-build-space@master
         with:
           swap-size-mb: 2048
-          temp-reserve-mb: 100
-          root-reserve-mb: 4096
+          temp-reserve-mb: 2048
+          root-reserve-mb: 16384
+          remove-codeql: true
+          remove-docker-images: true
 
       - name: Checkout Projects(拉取云编译仓库(本仓库)脚本)
         uses: actions/checkout@main
@@ -158,6 +160,30 @@ jobs:
           sudo mkdir -p $OPENWRT_PATH/build_wrt
           sudo chown $USER:$USER $OPENWRT_PATH/build_wrt
           sudo ln -s $OPENWRT_PATH/build_wrt $GITHUB_WORKSPACE/wrt
+
+          mkdir -p \
+            $GITHUB_WORKSPACE/.cache/go-build \
+            $GITHUB_WORKSPACE/.cache/go-mod \
+            $GITHUB_WORKSPACE/.cargo \
+            $GITHUB_WORKSPACE/.local/share \
+            $GITHUB_WORKSPACE/.npm \
+            $GITHUB_WORKSPACE/.pnpm \
+            $GITHUB_WORKSPACE/.pnpm-store \
+            $GITHUB_WORKSPACE/.rustup \
+            $GITHUB_WORKSPACE/.tmp
+
+          {
+            echo "TMPDIR=$GITHUB_WORKSPACE/.tmp"
+            echo "XDG_CACHE_HOME=$GITHUB_WORKSPACE/.cache"
+            echo "XDG_DATA_HOME=$GITHUB_WORKSPACE/.local/share"
+            echo "CARGO_HOME=$GITHUB_WORKSPACE/.cargo"
+            echo "RUSTUP_HOME=$GITHUB_WORKSPACE/.rustup"
+            echo "GOCACHE=$GITHUB_WORKSPACE/.cache/go-build"
+            echo "GOMODCACHE=$GITHUB_WORKSPACE/.cache/go-mod"
+            echo "npm_config_cache=$GITHUB_WORKSPACE/.npm"
+            echo "npm_config_store_dir=$GITHUB_WORKSPACE/.pnpm-store"
+            echo "PNPM_HOME=$GITHUB_WORKSPACE/.pnpm"
+          } >> $GITHUB_ENV
 
       - name: Clone Code(拉取编译的固件源码)
         run: |
