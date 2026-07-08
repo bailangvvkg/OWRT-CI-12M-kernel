@@ -75,6 +75,23 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 	fi
 fi
 
+# 固定 NSS 高频：AX6600 支持 1497600000 Hz
+if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
+  NSS_CLOCK_CONF="./target/linux/qualcommax/base-files/etc/sysctl.d/97-nss-clock-scale.conf"
+
+  mkdir -p "$(dirname "$NSS_CLOCK_CONF")"
+
+  # 清掉源码默认/旧配置，避免重复
+  sed -i '/^dev\.nss\.clock\.auto_scale=/d' "$NSS_CLOCK_CONF" 2>/dev/null || true
+  sed -i '/^dev\.nss\.clock\.current_freq=/d' "$NSS_CLOCK_CONF" 2>/dev/null || true
+
+  cat >> "$NSS_CLOCK_CONF" <<'EOF'
+# Lock NSS clock to high frequency
+dev.nss.clock.auto_scale=0
+dev.nss.clock.current_freq=1497600000
+EOF
+fi
+
 # # 编译器优化
 # if [[ $WRT_TARGET != *"X86"* ]]; then
 # 	echo "CONFIG_TARGET_OPTIONS=y" >> ./.config
