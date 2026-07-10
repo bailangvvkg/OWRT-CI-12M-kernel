@@ -75,6 +75,42 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 	fi
 fi
 
+# 修复上游 34bde0e 合并时误提交到 6.12 BPF headers 补丁中的冲突标记
+fix_bpf_headers_patch_conflict() {
+	local patch_file="$1"
+	local temp_file="${patch_file}.tmp"
+
+	if [ ! -f "$patch_file" ] || ! grep -q '^<<<<<<< ' "$patch_file"; then
+		return 0
+	fi
+
+	awk '
+		/^<<<<<<< / { in_conflict = 1; side = 1; next }
+		in_conflict && /^=======$/ { side = 2; next }
+		in_conflict && /^>>>>>>> / { in_conflict = 0; side = 0; next }
+		!in_conflict || side == 2 { print }
+		END { if (in_conflict) exit 1 }
+	' "$patch_file" > "$temp_file" || {
+		rm -f "$temp_file"
+		echo "Failed to resolve patch conflict: $patch_file" >&2
+		return 1
+	}
+
+	mv "$temp_file" "$patch_file"
+	if grep -Eq '^(<<<<<<< |=======|>>>>>>> )' "$patch_file"; then
+		echo "Patch conflict markers remain: $patch_file" >&2
+		return 1
+	fi
+
+	echo "Resolved upstream patch conflict: $patch_file"
+}
+
+for patch_file in \
+	./target/linux/generic/pending-6.12/711-07-net-dsa-qca8k-use-correct-CPU-port-when-having-multi.patch \
+	./target/linux/generic/pending-6.12/711-08-net-dsa-qca8k-implement-ds-ops-preferred_default_loc.patch; do
+	fix_bpf_headers_patch_conflict "$patch_file" || exit 1
+done
+
 # 固定 NSS 高频：AX6600 支持 1497600000 Hz
 if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
   NSS_CLOCK_CONF="./target/linux/qualcommax/base-files/etc/sysctl.d/97-nss-clock-scale.conf"
