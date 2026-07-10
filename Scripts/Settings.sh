@@ -80,14 +80,16 @@ fix_bpf_headers_patch_conflict() {
 	local patch_file="$1"
 	local temp_file="${patch_file}.tmp"
 
-	if [ ! -f "$patch_file" ] || ! grep -q '^<<<<<<< ' "$patch_file"; then
+	# Accept both standard 7-character conflict markers and the malformed
+	# 8-character markers currently present in VIKINGYFY/immortalwrt.
+	if [ ! -f "$patch_file" ] || ! grep -Eq '^<<<<<<<+ ' "$patch_file"; then
 		return 0
 	fi
 
 	awk '
-		/^<<<<<<< / { in_conflict = 1; side = 1; next }
-		in_conflict && /^=======$/ { side = 2; next }
-		in_conflict && /^>>>>>>> / { in_conflict = 0; side = 0; next }
+		/^<<<<<<<+ / { in_conflict = 1; side = 1; next }
+		in_conflict && /^=======+$/ { side = 2; next }
+		in_conflict && /^>>>>>>>+ / { in_conflict = 0; side = 0; next }
 		!in_conflict || side == 2 { print }
 		END { if (in_conflict) exit 1 }
 	' "$patch_file" > "$temp_file" || {
@@ -97,7 +99,7 @@ fix_bpf_headers_patch_conflict() {
 	}
 
 	mv "$temp_file" "$patch_file"
-	if grep -Eq '^(<<<<<<< |=======|>>>>>>> )' "$patch_file"; then
+	if grep -Eq '^(<<<<<<<+ |=======+$|>>>>>>>+ )' "$patch_file"; then
 		echo "Patch conflict markers remain: $patch_file" >&2
 		return 1
 	fi
