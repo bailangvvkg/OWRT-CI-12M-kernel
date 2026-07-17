@@ -352,6 +352,8 @@ UPDATE_LUCKY() {
 	fi
 
 	LUCKY_PACKAGE_VERSION="${LUCKY_BETA_TAG#v}"
+	# apk-tools requires prerelease suffixes such as beta to use an underscore.
+	LUCKY_PACKAGE_VERSION="${LUCKY_PACKAGE_VERSION/beta/_beta}"
 	echo "Latest Lucky beta: $LUCKY_PACKAGE_VERSION"
 
 	echo "Pull latest lucky from $LUCKY_REPO"
