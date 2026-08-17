@@ -271,11 +271,16 @@ UPDATE_LANSPEED() {
 	local LANSPEED_REPO="https://github.com/qimaoww/luci-app-lanspeed.git"
 	local PACKAGE_DIR
 	local TMP_DIR
+	local NSS_CONTROL_KBUILD
 
 	PACKAGE_DIR=$(PACKAGE_WORK_DIR)
 	TMP_DIR=$(mktemp -d)
+	NSS_CONTROL_KBUILD="$TMP_DIR/net/lanspeed-nss-control/src/Makefile"
 
-	rm -rf "$PACKAGE_DIR/luci-app-lanspeed" "$PACKAGE_DIR/lanspeedd"
+	rm -rf \
+		"$PACKAGE_DIR/luci-app-lanspeed" \
+		"$PACKAGE_DIR/lanspeedd" \
+		"$PACKAGE_DIR/lanspeed-nss-control"
 	if ! git clone --depth 1 --single-branch "$LANSPEED_REPO" "$TMP_DIR"; then
 		rm -rf "$TMP_DIR"
 		return 1
@@ -292,9 +297,26 @@ UPDATE_LANSPEED() {
 		rm -rf "$TMP_DIR"
 		return 1
 	fi
+	if [ ! -f "$TMP_DIR/net/lanspeed-nss-control/Makefile" ]; then
+		echo "lanspeed-nss-control Makefile not found in $LANSPEED_REPO" >&2
+		rm -rf "$TMP_DIR"
+		return 1
+	fi
+	if [ ! -f "$NSS_CONTROL_KBUILD" ]; then
+		echo "lanspeed-nss-control Kbuild Makefile not found in $LANSPEED_REPO" >&2
+		rm -rf "$TMP_DIR"
+		return 1
+	fi
+
+	# The package passes NSS headers through EXTRA_CFLAGS, so its Kbuild file
+	# must opt in to those flags or nss_api_if.h cannot be found.
+	if ! grep -Eq '^[[:space:]]*(subdir-)?ccflags-y[[:space:]]*\+?=[[:space:]]*\$\(EXTRA_CFLAGS\)([[:space:]]|$)' "$NSS_CONTROL_KBUILD"; then
+		sed -i '1i ccflags-y += $(EXTRA_CFLAGS)' "$NSS_CONTROL_KBUILD"
+	fi
 
 	cp -rf "$TMP_DIR/applications/luci-app-lanspeed" "$PACKAGE_DIR/luci-app-lanspeed"
 	cp -rf "$TMP_DIR/net/lanspeedd" "$PACKAGE_DIR/lanspeedd"
+	cp -rf "$TMP_DIR/net/lanspeed-nss-control" "$PACKAGE_DIR/lanspeed-nss-control"
 	rm -rf "$TMP_DIR"
 }
 
