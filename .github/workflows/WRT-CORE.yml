@@ -1,6 +1,3 @@
-# SPDX-License-Identifier: MIT
-# Copyright (C) 2026 VIKINGYFY
-
 #云编译公用核心
 name: WRT-CORE
 
@@ -42,8 +39,7 @@ on:
         type: string
       WRT_TEST:
         required: false
-        default: false
-        type: boolean
+        type: string
 
 env:
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -64,66 +60,136 @@ jobs:
   core:
     name: ${{inputs.WRT_SOURCE}}
     runs-on: ubuntu-latest
-    outputs:
-      cache_prefix: ${{steps.initialize-values.outputs.cache_prefix}}
-      cache_key: ${{steps.clone-code.outputs.cache_key}}
     steps:
-      - name: Checkout Projects
-        uses: actions/checkout@main
 
-      - name: Initialization Environment
+      # - name: Checkout Projects
+      #   uses: actions/checkout@main
+
+      - name: Check Server Performance(检查服务器性能)
+        run: |
+          echo "警告⚠"
+          echo "分配的服务器性能有限，若选择的插件过多，务必注意CPU性能！"
+          echo -e "已知CPU型号（降序）：7763，8370C，8272CL，8171M，E5-2673 \n"
+          echo "--------------------------CPU信息--------------------------"
+          echo "CPU物理数量：$(cat /proc/cpuinfo | grep "physical id" | sort | uniq | wc -l)"
+          echo -e "CPU核心信息：$(cat /proc/cpuinfo | grep name | cut -f2 -d: | uniq -c) \n"
+          echo "--------------------------内存信息--------------------------"
+          echo "已安装内存详细信息："
+          echo -e "$(sudo lshw -short -C memory | grep GiB) \n"
+          echo "--------------------------硬盘信息--------------------------"
+          echo "硬盘数量：$(ls /dev/sd* | grep -v [1-9] | wc -l)" && df -hT
+
+      - name: Free Disk Space(清理磁盘空间)
+        uses: endersonmenezes/free-disk-space@v3  # Use @main for latest, @v3 for stable
+        with:
+          remove_android: true
+          remove_dotnet: true
+          remove_haskell: true
+          remove_tool_cache: true
+          remove_swap: true
+          remove_packages: "azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql* temurin-* *llvm* mysql* dotnet-sdk-*"
+          remove_packages_one_command: true
+          remove_folders: "/usr/share/swift /usr/share/miniconda /usr/share/az* /usr/local/lib/node_modules /usr/local/share/chromium /usr/local/share/powershell /usr/local/julia /usr/local/aws-cli /usr/local/aws-sam-cli /usr/share/gradle"
+          rm_cmd: "rm"  # Use 'rmz' for faster deletion (default: 'rm')
+          rmz_version: "3.1.1"  # Required when rm_cmd is 'rmz'
+          testing: false
+
+      # - name: Free Disk Space (清理磁盘空间Ubuntu)
+      #   uses: jlumbroso/free-disk-space@main
+      #   with:
+      #     # this might remove tools that are actually needed,
+      #     # if set to "true" but frees about 6 GB
+      #     tool-cache: false
+          
+      #     # all of these default to true, but feel free to set to
+      #     # "false" if necessary for your workflow
+      #     android: true
+      #     dotnet: true
+      #     haskell: true
+      #     large-packages: true
+      #     docker-images: true
+      #     swap-storage: true
+
+      - name: Initialization Environment(安装依赖环境)
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo -E apt -yqq purge firefox
           sudo -E apt -yqq update
           sudo -E apt -yqq full-upgrade
           sudo -E apt -yqq autoremove --purge
           sudo -E apt -yqq autoclean
           sudo -E apt -yqq clean
           sudo -E apt -yqq install dos2unix libfuse-dev
+
+          # clang
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 21
+
           sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
           sudo -E systemctl daemon-reload
           sudo -E timedatectl set-timezone "Asia/Shanghai"
 
-          sudo mkdir -p /mnt/build_wrt
-          sudo chown $USER:$USER /mnt/build_wrt
-          sudo ln -s /mnt/build_wrt $GITHUB_WORKSPACE/wrt
+          echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
-      - name: Initialization Values
-        id: initialize-values
+          # sudo mkdir -p /mnt/build_wrt
+          # sudo chown $USER:$USER /mnt/build_wrt
+          # sudo ln -s /mnt/build_wrt $GITHUB_WORKSPACE/wrt
+          
+      - name: Combine Disks(合并磁盘)
+        uses: easimon/maximize-build-space@master
+        with:
+          swap-size-mb: 2048
+          temp-reserve-mb: 2048
+          root-reserve-mb: 16384
+          remove-codeql: true
+          remove-docker-images: true
+
+      - name: Checkout Projects(拉取云编译仓库(本仓库)脚本)
+        uses: actions/checkout@main
+
+      - name: Initialization Values(初始化变量)
         run: |
-          WRT_TARGET=$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' "./Config/$WRT_CONFIG.txt")
-          WRT_SUBTARGET=$(grep -m 1 -oP "^CONFIG_TARGET_${WRT_TARGET}_\K[\w]+(?=\=y)" "./Config/$WRT_CONFIG.txt")
-          WRT_CACHE_SOURCE=${WRT_SOURCE//\//-}
-          WRT_CACHE_BRANCH=${WRT_BRANCH//\//-}
-          WRT_CACHE_TARGET="$WRT_TARGET-$WRT_SUBTARGET"
-          WRT_CACHE_PREFIX="wrt-$WRT_CACHE_SOURCE-$WRT_CACHE_BRANCH-$WRT_CACHE_TARGET"
+          echo "WRT_DATE=$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")" >> $GITHUB_ENV
+          echo "WRT_MARK=${GITHUB_REPOSITORY%%/*}" >> $GITHUB_ENV
+          echo "WRT_INFO=${WRT_SOURCE%%/*}" >> $GITHUB_ENV
+          echo "WRT_TARGET=$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' ./Config/$WRT_CONFIG.txt)" >> $GITHUB_ENV
+          echo "WRT_KVER=none" >> $GITHUB_ENV
+          echo "WRT_LIST=none" >> $GITHUB_ENV
+
+          sudo mkdir -p $OPENWRT_PATH/build_wrt
+          sudo chown $USER:$USER $OPENWRT_PATH/build_wrt
+          sudo ln -s $OPENWRT_PATH/build_wrt $GITHUB_WORKSPACE/wrt
+
+          mkdir -p \
+            $GITHUB_WORKSPACE/.cache/go-build \
+            $GITHUB_WORKSPACE/.cache/go-mod \
+            $GITHUB_WORKSPACE/.cargo \
+            $GITHUB_WORKSPACE/.local/share \
+            $GITHUB_WORKSPACE/.npm \
+            $GITHUB_WORKSPACE/.pnpm \
+            $GITHUB_WORKSPACE/.pnpm-store \
+            $GITHUB_WORKSPACE/.rustup \
+            $GITHUB_WORKSPACE/.tmp
 
           {
-            echo "WRT_INFO=${WRT_SOURCE%%/*}"
-            echo "WRT_DATE=$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")"
-            echo "WRT_MARK=${GITHUB_REPOSITORY%%/*}"
-            echo "WRT_TARGET=$WRT_TARGET"
-            echo "WRT_SUBTARGET=$WRT_SUBTARGET"
-            echo "WRT_CACHE_TARGET=$WRT_CACHE_TARGET"
-            echo "WRT_CACHE_PREFIX=$WRT_CACHE_PREFIX"
-            echo "WRT_WIFI=wifi-yes"
-            echo "WRT_KVER=none"
-            echo "WRT_LIST=none"
-          } >> "$GITHUB_ENV"
-          echo "cache_prefix=$WRT_CACHE_PREFIX" >> "$GITHUB_OUTPUT"
+            echo "TMPDIR=$GITHUB_WORKSPACE/.tmp"
+            echo "XDG_CACHE_HOME=$GITHUB_WORKSPACE/.cache"
+            echo "XDG_DATA_HOME=$GITHUB_WORKSPACE/.local/share"
+            echo "CARGO_HOME=$GITHUB_WORKSPACE/.cargo"
+            echo "RUSTUP_HOME=$GITHUB_WORKSPACE/.rustup"
+            echo "GOCACHE=$GITHUB_WORKSPACE/.cache/go-build"
+            echo "GOMODCACHE=$GITHUB_WORKSPACE/.cache/go-mod"
+            echo "npm_config_cache=$GITHUB_WORKSPACE/.npm"
+            echo "npm_config_store_dir=$GITHUB_WORKSPACE/.pnpm-store"
+            echo "PNPM_HOME=$GITHUB_WORKSPACE/.pnpm"
+          } >> $GITHUB_ENV
 
-      - name: Clone Code
-        id: clone-code
+      - name: Clone Code(拉取编译的固件源码)
         run: |
           git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO ./wrt/
 
-          cd ./wrt/
-          WRT_HASH=$(git rev-parse HEAD)
-          echo "WRT_HASH=$WRT_HASH" >> $GITHUB_ENV
-          echo "WRT_CACHE_KEY=$WRT_CACHE_PREFIX-$WRT_HASH" >> $GITHUB_ENV
-          echo "cache_key=$WRT_CACHE_PREFIX-$WRT_HASH" >> "$GITHUB_OUTPUT"
+          cd ./wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
 
           # GitHub Action 移除国内下载源
           PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
@@ -135,43 +201,57 @@ jobs:
         run: |
           find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
 
-      - name: Restore Build Cache
-        id: cache-restore
-        if: ${{ !inputs.WRT_TEST }}
-        uses: actions/cache/restore@main
+      - name: Check Caches(将所有的rxt sh后缀文件全部赋予执行权限)
+        id: check-cache
+        if: env.WRT_TEST != 'true'
+        uses: actions/cache@main
         with:
-          key: ${{env.WRT_CACHE_KEY}}
-          restore-keys: ${{env.WRT_CACHE_PREFIX}}-
+          key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_HASH}}
+          restore-keys: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}
           path: |
             ./wrt/.ccache
             ./wrt/staging_dir/host*
             ./wrt/staging_dir/tool*
 
-      - name: Prepare Restored Build Cache
-        if: ${{ !inputs.WRT_TEST && steps.cache-restore.outputs.cache-matched-key != '' }}
+      - name: Update Caches(更新缓存)
+        if: env.WRT_TEST != 'true'
         run: |
-          find "./wrt/staging_dir" -type d -name "stamp" -not -path "*target*" | while read -r DIR; do
-            find "$DIR" -type f -exec touch {} +
-          done
-          mkdir -p ./wrt/tmp
-          echo "1" > ./wrt/tmp/.build
-          echo "restored build cache: ${{steps.cache-restore.outputs.cache-matched-key}}"
+          if [ -d "./wrt/staging_dir" ]; then
+            find "./wrt/staging_dir" -type d -name "stamp" -not -path "*target*" | while read -r DIR; do
+              find "$DIR" -type f -exec touch {} +
+            done
 
-      - name: Update Feeds
+            mkdir -p ./wrt/tmp && echo "1" > ./wrt/tmp/.build
+
+            echo "toolchain skiped done!"
+          else
+            echo "caches missed!"
+          fi
+
+          if ${{steps.check-cache.outputs.cache-hit != 'true'}}; then
+            CACHE_LIST=$(gh cache list --key "$WRT_CONFIG-$WRT_INFO" | cut -f 1)
+            for CACHE_KEY in $CACHE_LIST; do
+              gh cache delete $CACHE_KEY
+            done
+
+            echo "caches cleanup done!"
+          fi
+
+      - name: Update Feeds(更新软件包)
         run: |
           cd ./wrt/
 
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Custom Packages
+      - name: Custom Packages(自定义软件包)
         run: |
           cd ./wrt/package/
 
           $GITHUB_WORKSPACE/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Scripts/Handles.sh
 
-      - name: Custom Settings
+      - name: Custom Settings(自定义设置)
         run: |
           cd ./wrt/
 
@@ -185,31 +265,21 @@ jobs:
 
           make defconfig -j$(nproc) && make clean -j$(nproc)
 
-      - name: Download Packages
-        if: ${{ !inputs.WRT_TEST }}
+      - name: Download Packages(下载软件包依赖)
+        if: env.WRT_TEST != 'true'
         run: |
           cd ./wrt/
 
           make download -j$(nproc)
 
-      - name: Compile Firmware
-        if: ${{ !inputs.WRT_TEST }}
+      - name: Compile Firmware(编译固件)
+        if: env.WRT_TEST != 'true'
         run: |
           cd ./wrt/
 
           make -j$(nproc) || make -j1 V=s
 
-      - name: Save Build Cache
-        if: ${{ !inputs.WRT_TEST && success() && steps.cache-restore.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@main
-        with:
-          key: ${{env.WRT_CACHE_KEY}}
-          path: |
-            ./wrt/.ccache
-            ./wrt/staging_dir/host*
-            ./wrt/staging_dir/tool*
-
-      - name: Machine Information
+      - name: Machine Information(机器信息)
         run: |
           cd ./wrt/
 
@@ -221,22 +291,24 @@ jobs:
           du -h --max-depth=1
           echo "======================="
 
-      - name: Package Firmware
+      - name: Package Firmware(打包固件)
         run: |
           cd ./wrt/ && mkdir ./upload/
 
           cp -f ./.config ./upload/Config-"$WRT_CONFIG"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_DATE".txt
 
-          if [[ "$WRT_TEST" != 'true' ]]; then
+          if [[ $WRT_TEST != 'true' ]]; then
             echo "WRT_KVER=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^kernel - \K[\d\.]+' {} \;)" >> $GITHUB_ENV
             echo "WRT_LIST=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^luci-(app|theme)[^ ]*' {} \; | tr '\n' ' ')" >> $GITHUB_ENV
+
+            echo "NSS_FIRMWARE_VERSION=$(grep -oP '^CONFIG_NSS_FIRMWARE_VERSION_\K[\d_]+(?==y)' .config | sed 's/_/./g')" >> $GITHUB_ENV
 
             find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
 
             for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
               EXT=$(basename $FILE | cut -d '.' -f 2-)
               NAME=$(basename $FILE | cut -d '.' -f 1 | grep -io "\($WRT_TARGET\).*")
-              NEW_FILE="$NAME"-"$WRT_INFO"-"$WRT_BRANCH"-"$WRT_WIFI"-"$WRT_DATE"."$EXT"
+              NEW_FILE="$WRT_INFO"-"$WRT_BRANCH"-"$NAME"-"$WRT_DATE"."$EXT"
               mv -f $FILE ./upload/$NEW_FILE
             done
 
@@ -245,7 +317,7 @@ jobs:
             make clean -j$(nproc)
           fi
 
-      - name: Release Firmware
+      - name: Release Firmware(发布固件)
         uses: softprops/action-gh-release@master
         with:
           tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
@@ -270,45 +342,7 @@ jobs:
             WIFI名称：${{env.WRT_SSID}}
             WIFI密码：${{env.WRT_WORD}}
 
+            NSS版本：${{env.NSS_FIRMWARE_VERSION}}
+
             内核版本：${{env.WRT_KVER}}
             插件列表：${{env.WRT_LIST}}
-
-  cache-rollover:
-    name: Roll cache generations
-    needs: core
-    if: ${{ !inputs.WRT_TEST && needs.core.result == 'success' }}
-    runs-on: ubuntu-latest
-    concurrency:
-      group: wrt-cache-rollover-${{github.ref}}-${{needs.core.outputs.cache_prefix}}
-      cancel-in-progress: false
-    env:
-      GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-      GH_REPO: ${{github.repository}}
-      WRT_CACHE_PREFIX: ${{needs.core.outputs.cache_prefix}}
-      WRT_CACHE_KEY: ${{needs.core.outputs.cache_key}}
-    steps:
-      - name: Roll Build Cache
-        run: |
-          set -euo pipefail
-
-          CURRENT_CACHE_KEYS=$(gh cache list --repo "$GH_REPO" --key "$WRT_CACHE_KEY" --ref "$GITHUB_REF" --limit 100 --json key --jq '.[].key')
-          CURRENT_CACHE_FOUND=0
-          while IFS= read -r CACHE_KEY; do
-            if [ "$CACHE_KEY" = "$WRT_CACHE_KEY" ]; then
-              CURRENT_CACHE_FOUND=1
-              break
-            fi
-          done <<< "$CURRENT_CACHE_KEYS"
-
-          if [ "$CURRENT_CACHE_FOUND" -ne 1 ]; then
-            echo "skip cache rollover: current cache is not available yet"
-            exit 0
-          fi
-
-          gh cache list --repo "$GH_REPO" --key "$WRT_CACHE_PREFIX-" --ref "$GITHUB_REF" --limit 100 --json id,key --jq '.[] | [.id, .key] | @tsv' |
-            while IFS=$'\t' read -r CACHE_ID CACHE_KEY; do
-              [ -n "$CACHE_ID" ] || continue
-              [ "$CACHE_KEY" = "$WRT_CACHE_KEY" ] && continue
-              gh cache delete "$CACHE_ID" --repo "$GH_REPO" ||
-                echo "warning: failed to delete cache $CACHE_ID ($CACHE_KEY)"
-            done
