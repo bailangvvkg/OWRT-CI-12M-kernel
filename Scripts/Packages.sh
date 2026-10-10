@@ -326,91 +326,49 @@ UPDATE_LANSPEED() {
 UPDATE_LUCKY() {
   local lucky_repo="https://github.com/gdy666/luci-app-lucky.git"
   local lucky_release_root="https://release.66666.host"
-  local package_dir="./package"
-  local tmp_dir release_index candidate_tag
-  local release_dir_index release_file_index
-  local lucky_beta_tag="" lucky_package_version=""
-  local lucky_docker_dir="" lucky_docker_file="" lucky_binary_version=""
-  local lucky_docker_url=""
+  local package_dir
+  local tmp_dir candidate_tag candidate_base candidate_url
+  local lucky_tag="" lucky_binary_version="" lucky_package_version=""
   local lucky_makefile=""
 
+  # 发布服务器(release.66666.host)走了 TencentEdgeOne CDN，同一地址有时返回 JSON
+  # 有时返回 HTML（run 677/678/685/686 均因拿到 HTML 导致 jq 解析失败而中断），
+  # 因此不再依赖 jq：从 JSON 的 "name" 字段或 HTML 的 href 链接里提取
+  # v主.次.补丁[beta数字] 形式的目录名，按版本号数值从大到小逐个探测可用性。
+  package_dir=$(PACKAGE_WORK_DIR)
   lucky_makefile="$package_dir/lucky/Makefile"
-  command -v jq >/dev/null 2>&1 || {
-    echo "[packages] jq is required to resolve the latest Lucky release" >&2
-    return 1
-  }
-
-  if ! release_index=$(curl --retry 3 --retry-all-errors --connect-timeout 15 \
-      --max-time 60 -fsSL -H 'Accept: application/json' "$lucky_release_root/?format=json"); then
-    echo "[packages] failed to fetch Lucky releases from $lucky_release_root" >&2
-    return 1
-  fi
 
   while IFS= read -r candidate_tag; do
-    if [[ "$candidate_tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(beta[0-9]*)?$ ]] &&
-       { [[ -z "$lucky_beta_tag" ]] || LUCKY_VERSION_GREATER "$candidate_tag" "$lucky_beta_tag"; }; then
-      lucky_beta_tag="$candidate_tag"
+    candidate_base="${candidate_tag#v}"
+    candidate_base="${candidate_base%%beta*}"
+    candidate_url="$lucky_release_root/$candidate_tag/${candidate_base}_lucky_docker/lucky_${candidate_base}_Linux_arm64_lucky_docker.tar.gz"
+    if curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 60 \
+        -fsIL "$candidate_url" >/dev/null 2>&1; then
+      lucky_tag="$candidate_tag"
+      lucky_binary_version="$candidate_base"
+      break
     fi
+    echo "[packages] Lucky release not usable, trying next: $candidate_tag" >&2
   done < <(
-    printf '%s' "$release_index" |
-      jq -r '.[] | select((.is_dir == true) and (.name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+(beta[0-9]*)?$"))) | .name'
+    curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 60 \
+      -fsSL -H 'Accept: application/json' "$lucky_release_root/" |
+      grep -oE '"name":[[:space:]]*"v[0-9]+\.[0-9]+\.[0-9]+(beta[0-9]*)?"|href="\./v[0-9]+\.[0-9]+\.[0-9]+(beta[0-9]*)?/"' |
+      sed -e 's/^"name":[[:space:]]*"//' -e 's/^href="\.\///' -e 's/"$//' -e 's/\/$//' |
+      sort -Vru
   )
 
-  [[ -n "$lucky_beta_tag" ]] || {
-    echo "[packages] no usable stable or beta Lucky release was found" >&2
-    return 1
-  }
-
-  if ! release_dir_index=$(curl --retry 3 --retry-all-errors --connect-timeout 15 \
-      --max-time 60 -fsSL -H 'Accept: application/json' \
-      "$lucky_release_root/$lucky_beta_tag/?format=json"); then
-    echo "[packages] failed to list Lucky release: $lucky_beta_tag" >&2
+  if [ -z "$lucky_tag" ]; then
+    echo "[packages] no usable Lucky release was found on $lucky_release_root" >&2
     return 1
   fi
-  lucky_docker_dir=$(printf '%s' "$release_dir_index" | jq -r '
-    [.[] | select(
-      .is_dir == true and
-      (.name | test("^[0-9]+\\.[0-9]+\\.[0-9]+_lucky_docker$"))
-    ) | .name] | unique |
-    if length == 1 then .[0] else empty end
-  ')
-  [[ -n "$lucky_docker_dir" ]] || {
-    echo "[packages] no unique lucky_docker directory in $lucky_beta_tag" >&2
-    return 1
-  }
 
-  if ! release_file_index=$(curl --retry 3 --retry-all-errors --connect-timeout 15 \
-      --max-time 60 -fsSL -H 'Accept: application/json' \
-      "$lucky_release_root/$lucky_beta_tag/$lucky_docker_dir/?format=json"); then
-    echo "[packages] failed to list Lucky directory: $lucky_docker_dir" >&2
-    return 1
-  fi
-  lucky_docker_file=$(printf '%s' "$release_file_index" | jq -r '
-    [.[] | select(
-      .is_dir == false and
-      (.name | test("^lucky_[0-9]+\\.[0-9]+\\.[0-9]+_Linux_x86_64_lucky_docker\\.tar\\.gz$"))
-    ) | .name] | unique |
-    if length == 1 then .[0] else empty end
-  ')
-  [[ "$lucky_docker_file" =~ ^lucky_([0-9]+\.[0-9]+\.[0-9]+)_Linux_x86_64_lucky_docker\.tar\.gz$ ]] || {
-    echo "[packages] no unique Lucky x86_64 lucky_docker archive in $lucky_docker_dir" >&2
-    return 1
-  }
-  lucky_binary_version="${BASH_REMATCH[1]}"
-  lucky_docker_url="$lucky_release_root/$lucky_beta_tag/$lucky_docker_dir/$lucky_docker_file"
-
-  curl --retry 3 --retry-all-errors --connect-timeout 15 --max-time 60 \
-    -fsIL "$lucky_docker_url" >/dev/null || {
-    echo "[packages] Lucky x86_64 lucky_docker release not found: $lucky_docker_url" >&2
-    return 1
-  }
-
-  lucky_package_version="${lucky_beta_tag#v}"
+  lucky_package_version="${lucky_tag#v}"
+  # apk-tools 要求预发布后缀(beta)以下划线分隔
   lucky_package_version="${lucky_package_version/beta/_beta}"
-  echo "[packages] latest Lucky release: $lucky_package_version ($lucky_docker_url)"
+  echo "[packages] latest Lucky release: $lucky_package_version ($lucky_tag)"
 
   rm -rf "$package_dir/lucky" "$package_dir/luci-app-lucky"
-  find ./feeds/luci ./feeds/packages -maxdepth 4 -type d \
+  find "$(FEEDS_WORK_DIR)" -maxdepth 4 -type d \
     \( -name lucky -o -name luci-app-lucky \) \
     -prune -exec rm -rf {} + 2>/dev/null || true
 
@@ -436,18 +394,26 @@ UPDATE_LUCKY() {
     echo "[packages] Lucky Makefile not found at $lucky_makefile" >&2
     return 1
   }
+  # gdy666 的 lucky/Makefile 已改为标准 PKG_SOURCE 下载机制(默认从 GitHub Releases 拉稳定版)，
+  # 这里改指到发布服务器并强制使用 lucky_docker 归档：aarch64(arm64)/armv7/i386/x86_64。
+  # 注意 LUCKY_RELEASE_VARIANT/SUFFIX 必须用递归赋值(=)，因为插入位置在 LUCKY_ARCH 的
+  # ifeq 判定之前，若用立即展开(:=)会拿到空的 LUCKY_ARCH，导致 arm64 误选普通版。
   sed -i \
     -e "s|^PKG_VERSION:=.*|PKG_VERSION:=$lucky_package_version|" \
-    -e "s|^PKG_SOURCE:=.*|PKG_SOURCE:=$lucky_docker_file|" \
-    -e "s|^PKG_SOURCE_URL:=.*|PKG_SOURCE_URL:=$lucky_release_root/$lucky_beta_tag/$lucky_docker_dir|" \
+    -e "s|^PKG_SOURCE:=.*|PKG_SOURCE:=lucky_${lucky_binary_version}_Linux_\$(LUCKY_ARCH)\$(LUCKY_RELEASE_SUFFIX).tar.gz|" \
+    -e "s|^PKG_SOURCE_URL:=.*|PKG_SOURCE_URL:=$lucky_release_root/$lucky_tag/${lucky_binary_version}_\$(LUCKY_RELEASE_VARIANT)|" \
+    -e '/^PKG_RELEASE:=/a LUCKY_DOCKER_ARCHS:=arm64 armv7 i386 x86_64' \
+    -e '/^PKG_RELEASE:=/a LUCKY_RELEASE_VARIANT=$(if $(filter $(LUCKY_ARCH),$(LUCKY_DOCKER_ARCHS)),lucky_docker,lucky)' \
+    -e '/^PKG_RELEASE:=/a LUCKY_RELEASE_SUFFIX=$(if $(filter $(LUCKY_ARCH),$(LUCKY_DOCKER_ARCHS)),_lucky_docker)' \
     "$lucky_makefile"
 
-  grep -Fq "PKG_VERSION:=$lucky_package_version" "$lucky_makefile" &&
-  grep -Fq "PKG_SOURCE:=$lucky_docker_file" "$lucky_makefile" &&
-  grep -Fq "PKG_SOURCE_URL:=$lucky_release_root/$lucky_beta_tag/$lucky_docker_dir" "$lucky_makefile" || {
+  if ! grep -Fq "PKG_VERSION:=$lucky_package_version" "$lucky_makefile" ||
+    ! grep -Fq 'LUCKY_DOCKER_ARCHS:=arm64 armv7 i386 x86_64' "$lucky_makefile" ||
+    ! grep -Fq "PKG_SOURCE:=lucky_${lucky_binary_version}_Linux_\$(LUCKY_ARCH)\$(LUCKY_RELEASE_SUFFIX).tar.gz" "$lucky_makefile" ||
+    ! grep -Fq "PKG_SOURCE_URL:=$lucky_release_root/$lucky_tag/${lucky_binary_version}_\$(LUCKY_RELEASE_VARIANT)" "$lucky_makefile"; then
     echo "[packages] failed to update Lucky Makefile for $lucky_package_version" >&2
     return 1
-  }
+  fi
 
   if [ -f "$package_dir/lucky/files/luckyuci" ]; then
     sed -i "s/option enabled '1'/option enabled '0'/g" "$package_dir/lucky/files/luckyuci"
