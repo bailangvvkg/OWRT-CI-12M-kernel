@@ -517,6 +517,11 @@ git_package_clone https://github.com/zzsj0928/luci-app-pushbot luci-app-pushbot
 # 移除 openwrt feeds 自带的核心库
 rm -rf "$(FEEDS_WORK_DIR)"/packages/net/{xray-core,v2ray-geodata,sing-box,chinadns-ng,dns2socks,hysteria,ipt2socks,microsocks,naiveproxy,shadowsocks-libev,shadowsocks-rust,shadowsocksr-libev,simple-obfs,tcping,trojan-plus,tuic-client,v2ray-plugin,xray-plugin,geoview,shadow-tls}
 git_package_clone https://github.com/Openwrt-Passwall/openwrt-passwall-packages passwall-packages
+# passwall-packages 自带的 sing-box(1.14.3) 与 viking 仓库的 sing-box(1.15.0_alpha12) 同名,
+# 元数据扫描时后者被前者覆盖,导致 luci-app-homeproxy(依赖 sing-box>=1.15.0_alpha10)
+# 在 package/install 阶段依赖冲突(run 688/689 因此失败)。passwall 对 sing-box 无版本
+# 约束(仅 select PACKAGE_sing-box),删掉这份旧的,统一使用 viking 的新版。
+rm -rf "$(PACKAGE_WORK_DIR)"/passwall-packages/sing-box
 # 移除 openwrt feeds 过时的luci版本
 rm -rf "$(FEEDS_WORK_DIR)"/luci/applications/luci-app-passwall
 git_package_clone https://github.com/Openwrt-Passwall/openwrt-passwall passwall-luci
