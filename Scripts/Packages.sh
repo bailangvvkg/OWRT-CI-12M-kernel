@@ -440,12 +440,168 @@ git_sparse_clone main https://github.com/kenzok8/small-package daed-next luci-ap
 
 git_sparse_clone main https://github.com/kiddin9/op-packages luci-app-cloudflarespeedtest luci-app-nginx-manager luci-app-wechatpush || exit 1
 
-# docker
-git_sparse_clone main https://github.com/kiddin9/op-packages luci-app-dockerman dockerd || exit 1
+# docker：改用官方 feeds（luci: luci-app-dockerman；packages: docker/dockerd/docker-compose，dockerd 29.6.1）。
+# 不再克隆 kiddin9/op-packages 的 dockerd(27.3.1)：其仅有 iptables 兼容层，
+# 由下方 PATCH_DOCKER_NATIVE_NFTABLES 切换到 Docker Engine 原生 nftables 后端
+# （daemon.json "firewall-backend": "nftables"，需 moby >= 28.4，feeds 已满足）。
+# git_sparse_clone main https://github.com/kiddin9/op-packages luci-app-dockerman dockerd || exit 1
 
 # git clone --depth 1 --single-branch https://github.com/breeze303/openwrt-podman package/podman
 UPDATE_PODMAN || exit 1
 RUN_FEEDS_INSTALL || exit 1
+
+# Docker Engine 原生 nftables 后端（方案移植自 minihuber/openwrt-7.X）。
+# - 去掉 dockerd 硬依赖的 iptables/ip6tables/kmod-ipt-* 兼容层，改为 +firewall4 +kmod-br-netfilter
+# - dockerd.init 注入 UCI firewall_backend（默认 nftables），写入 daemon.json 的 "firewall-backend"
+# - 删除 iptables_add_blocking_rule（原生 nft 表自行处理阻断，LuCI 不再报「检测到旧版规则」）
+# - 注入 enable_cgroup_controllers，确保 cgroup v2 控制器在 procd 实例 cgroup 创建前启用
+# 目标 package/feeds/packages/dockerd 为 symlink 指向 feeds/，重跑 feeds install 不会回滚补丁。
+PATCH_DOCKER_NATIVE_NFTABLES() {
+	local ROOT_DIR DOCKERD_DIR DOCKERD_MAKEFILE DOCKERD_INIT DOCKERD_CONFIG
+
+	ROOT_DIR=$(OPENWRT_ROOT_DIR)
+	DOCKERD_DIR="$ROOT_DIR/package/feeds/packages/dockerd"
+	DOCKERD_MAKEFILE="$DOCKERD_DIR/Makefile"
+	DOCKERD_INIT="$DOCKERD_DIR/files/dockerd.init"
+	DOCKERD_CONFIG="$DOCKERD_DIR/files/etc/config/dockerd"
+
+	for path in "$DOCKERD_MAKEFILE" "$DOCKERD_INIT" "$DOCKERD_CONFIG"; do
+		[ -f "$path" ] || {
+			echo "[packages] Docker nftables patch target missing: $path" >&2
+			return 1
+		}
+	done
+
+	# 幂等：已打过的锚点跳过，feeds 升级导致锚点漂移时立即报错
+	python3 - "$DOCKERD_MAKEFILE" "$DOCKERD_INIT" <<'PATCH_DOCKER'
+import re
+import sys
+from pathlib import Path
+
+makefile_path = Path(sys.argv[1])
+init_path = Path(sys.argv[2])
+
+makefile_lines = makefile_path.read_text().splitlines()
+forbidden = re.compile(
+    r"^\s*\+(?:"
+    r"iptables(?:-nft|-mod-extra)?|"
+    r"IPV6:ip6tables(?:-nft)?|"
+    r"IPV6:kmod-ipt-nat6|"
+    r"kmod-ipt-nat|kmod-ipt-physdev|kmod-nf-ipvs"
+    r")\s*\\$"
+)
+native = re.compile(r"^\s*\+(?:firewall4|kmod-br-netfilter)\s*\\$")
+makefile_lines = [
+    line for line in makefile_lines
+    if not forbidden.search(line) and not native.search(line)
+]
+anchors = [index for index, line in enumerate(makefile_lines) if line.strip() == "+containerd \\"]
+if len(anchors) != 1:
+    raise SystemExit(f"expected one dockerd +containerd dependency, found {len(anchors)}")
+makefile_lines[anchors[0] + 1:anchors[0] + 1] = [
+    "    +firewall4 \\", "    +kmod-br-netfilter \\"
+]
+makefile_path.write_text("\n".join(makefile_lines) + "\n")
+
+content = init_path.read_text()
+
+def replace_required(old, new, description):
+    global content
+    if new in content:
+        return
+    if old not in content:
+        raise SystemExit(f"could not patch {description} in {init_path}")
+    content = content.replace(old, new, 1)
+
+cgroup_function = """\
+enable_cgroup_controllers() {
+\tlocal controller path
+
+\t[ -f /sys/fs/cgroup/cgroup.controllers ] || return 0
+\t[ -w /sys/fs/cgroup/cgroup.subtree_control ] || return 0
+
+\t# procd places dockerd in /services/dockerd/instance1.  Docker probes
+\t# memory.swap.max in that cgroup, so enable the resource controllers at
+\t# each required parent before procd creates the instance cgroup.
+\tmkdir -p /sys/fs/cgroup/services/dockerd
+\tfor path in /sys/fs/cgroup /sys/fs/cgroup/services /sys/fs/cgroup/services/dockerd; do
+\t\t[ -f "${path}/cgroup.controllers" ] || continue
+\t\tfor controller in cpuset cpu io memory pids; do
+\t\t\tgrep -qw "${controller}" "${path}/cgroup.controllers" || continue
+\t\t\techo "+${controller}" >"${path}/cgroup.subtree_control" 2>/dev/null || logger -t dockerd-init -p notice "failed to enable ${controller} in ${path}"
+\t\tdone
+\tdone
+}
+
+"""
+if cgroup_function not in content:
+    if "process_config() {" not in content:
+        raise SystemExit("could not patch dockerd cgroup preparation function")
+    content = content.replace("process_config() {", cgroup_function + "process_config() {", 1)
+
+replace_required(
+    "\tlocal alt_config_file data_root log_level iptables ip6tables bip\n",
+    "\tlocal alt_config_file data_root log_level iptables ip6tables firewall_backend bip\n",
+    "the dockerd process_config variable list",
+)
+replace_required(
+    "\tlocal nofile=$(cat /proc/sys/fs/nr_open)\n\n\tprocess_config\n",
+    "\tlocal nofile=$(cat /proc/sys/fs/nr_open)\n\n\tenable_cgroup_controllers\n\tprocess_config\n",
+    "the dockerd cgroup preparation call",
+)
+replace_required(
+    '\tconfig_get_bool ip6tables globals ip6tables "0"\n',
+    '\tconfig_get_bool ip6tables globals ip6tables "0"\n'
+    '\tconfig_get firewall_backend globals firewall_backend "nftables"\n',
+    "the dockerd firewall_backend UCI read",
+)
+replace_required(
+    '\tjson_add_boolean "ip6tables" "${ip6tables}"\n',
+    '\tjson_add_boolean "ip6tables" "${ip6tables}"\n'
+    '\tjson_add_string "firewall-backend" "${firewall_backend}"\n',
+    "the dockerd firewall-backend JSON setting",
+)
+
+content = content.replace(
+    '\t[ "${iptables}" -eq "1" ] && config_foreach iptables_add_blocking_rule firewall\n',
+    "",
+)
+function_start = content.find("iptables_add_blocking_rule() {")
+if function_start != -1:
+    function_end = content.find("\nstop_service() {", function_start)
+    if function_end == -1:
+        raise SystemExit(f"could not remove iptables_add_blocking_rule from {init_path}")
+    content = content[:function_start] + content[function_end + 1:]
+init_path.write_text(content)
+PATCH_DOCKER
+
+	cat >"$DOCKERD_CONFIG" <<'DOCKERD_UCI'
+# Docker Engine settings rendered to /tmp/dockerd/daemon.json by procd.
+config globals 'globals'
+	option data_root '/opt/docker/'
+	option log_level 'warn'
+	option firewall_backend 'nftables'
+	option iptables '1'
+
+config proxies 'proxies'
+DOCKERD_UCI
+
+	# 验收：任一关键点缺失即失败（防 feeds 升级后锚点漂移静默回退）
+	grep -q '^    +firewall4 \\' "$DOCKERD_MAKEFILE" &&
+	grep -q '^    +kmod-br-netfilter \\' "$DOCKERD_MAKEFILE" &&
+	! grep -Eq '^[[:space:]]*\+(iptables|ip6tables|IPV6:ip6tables|IPV6:kmod-ipt-nat6|kmod-ipt-nat|kmod-ipt-physdev|kmod-nf-ipvs)' "$DOCKERD_MAKEFILE" &&
+	grep -qF 'config_get firewall_backend globals firewall_backend "nftables"' "$DOCKERD_INIT" &&
+	grep -qF 'json_add_string "firewall-backend" "${firewall_backend}"' "$DOCKERD_INIT" &&
+	! grep -q 'iptables_add_blocking_rule' "$DOCKERD_INIT" &&
+	grep -qF 'enable_cgroup_controllers' "$DOCKERD_INIT" &&
+	grep -qF "option firewall_backend 'nftables'" "$DOCKERD_CONFIG" || {
+		echo "[packages] failed to configure Docker native nftables backend" >&2
+		return 1
+	}
+
+	echo "[packages] Docker native nftables backend configured (firewall-backend=nftables, no iptables compat)"
+}
+PATCH_DOCKER_NATIVE_NFTABLES || exit 1
 
 PATCH_NGINX() {
 	local ROOT_DIR

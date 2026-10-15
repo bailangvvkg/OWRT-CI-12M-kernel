@@ -301,8 +301,18 @@ echo "CONFIG_DEFAULT_tcp_cubic=y" >> ./.config
 # 磁盘管理
 echo "CONFIG_PACKAGE_luci-app-diskman=y" >> ./.config
 echo "CONFIG_PACKAGE_cfdisk=y" >> ./.config
-# docker(只能集成)
+# docker(只能集成) —— 官方 feeds 版，配合 Packages.sh 的 PATCH_DOCKER_NATIVE_NFTABLES
+# 使用 Docker Engine 原生 nftables 后端，全固件无 iptables 兼容层
+# （LuCI 防火墙页不会再报「检测到旧版规则」）
 echo "CONFIG_PACKAGE_luci-app-dockerman=y" >> ./.config
+# 显式禁用 iptables 系前端（若被其他包 select，编译后的纯 nft 闸门会报错定位）
+echo "CONFIG_PACKAGE_iptables-nft=n" >> ./.config
+echo "CONFIG_PACKAGE_ip6tables-nft=n" >> ./.config
+echo "CONFIG_PACKAGE_iptables-zz-legacy=n" >> ./.config
+echo "CONFIG_PACKAGE_xtables-nft=n" >> ./.config
+# PassWall 透明代理钉死 nftables 模式（fw4 下本就默认 nft，此处显式固化防退化）
+echo "CONFIG_PACKAGE_luci-app-passwall_Nftables_Transparent_Proxy=y" >> ./.config
+echo "CONFIG_PACKAGE_luci-app-passwall_Iptables_Transparent_Proxy=n" >> ./.config
 # Podman
 # echo "CONFIG_PACKAGE_podman=y" >> ./.config
 # echo "CONFIG_PACKAGE_luci-app-podman=y" >> ./.config

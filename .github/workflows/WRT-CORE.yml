@@ -279,6 +279,37 @@ jobs:
 
           make -j$(nproc) || make -j1 V=s
 
+      - name: Verify Pure nftables(纯nft防火墙校验)
+        if: env.WRT_TEST != 'true'
+        run: |
+          cd ./wrt/
+
+          MANIFESTS=$(find ./bin/targets/ -type f -name "*.manifest")
+          [ -n "$MANIFESTS" ] || { echo "::error::未找到固件 manifest，无法执行纯 nftables 校验"; exit 1; }
+
+          cat $MANIFESTS > /tmp/all.manifest
+
+          # 全固件禁止任何 iptables 兼容层前端（Docker 已用原生 nftables 后端）
+          FORBIDDEN=$(awk '$1 ~ /^(iptables|ip6tables|xtables|arptables|ebtables)(-|$)/ { print $1 }' /tmp/all.manifest | sort -u)
+          [ -z "$FORBIDDEN" ] || { echo "::error::检测到 iptables 兼容层混入固件：$FORBIDDEN"; exit 1; }
+
+          # kmod-ipt-* 仅为警告（内核残留模块不会产生 iptables-save 规则，但纯血模式应尽量为零）
+          KMOD_WARN=$(awk '$1 ~ /^kmod-ipt-/ { print $1 }' /tmp/all.manifest | sort -u)
+          [ -z "$KMOD_WARN" ] || echo "::warning::固件内仍存在 iptables 内核模块：$KMOD_WARN"
+
+          if grep -q '^dockerd ' /tmp/all.manifest; then
+            grep -qF "option firewall_backend 'nftables'" ./package/feeds/packages/dockerd/files/etc/config/dockerd \
+              || { echo "::error::dockerd UCI 配置缺少 firewall_backend nftables"; exit 1; }
+            grep -qF 'json_add_string "firewall-backend" "${firewall_backend}"' ./package/feeds/packages/dockerd/files/dockerd.init \
+              || { echo "::error::dockerd init 未注入 firewall-backend"; exit 1; }
+            DOCKERD_VER=$(grep -m1 -oP '^dockerd - \K[0-9]+' /tmp/all.manifest)
+            echo "Docker $DOCKERD_VER 原生 nftables 后端校验通过 ✅"
+          else
+            echo "本次固件未包含 dockerd，跳过 Docker 后端校验"
+          fi
+
+          echo "纯 nftables 校验通过 ✅（无 iptables 兼容层，LuCI 不再报「检测到旧版规则」）"
+
       - name: Machine Information(机器信息)
         run: |
           cd ./wrt/
