@@ -302,8 +302,10 @@ jobs:
               || { echo "::error::dockerd UCI 配置缺少 firewall_backend nftables"; exit 1; }
             grep -qF 'json_add_string "firewall-backend" "${firewall_backend}"' ./package/feeds/packages/dockerd/files/dockerd.init \
               || { echo "::error::dockerd init 未注入 firewall-backend"; exit 1; }
+            [ -x ./package/feeds/packages/dockerd/files/etc/uci-defaults/99-dockerd-native-nftables ] \
+              || { echo "::error::dockerd 缺少 firewall_backend 归一 uci-defaults 脚本"; exit 1; }
             DOCKERD_VER=$(grep -m1 -oP '^dockerd - \K[0-9]+' /tmp/all.manifest)
-            echo "Docker $DOCKERD_VER 原生 nftables 后端校验通过 ✅"
+            echo "Docker $DOCKERD_VER 原生 nftables 后端校验通过 ✅（含首开机 uci 归一）"
           else
             echo "本次固件未包含 dockerd，跳过 Docker 后端校验"
           fi

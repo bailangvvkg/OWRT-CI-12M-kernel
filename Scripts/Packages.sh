@@ -455,6 +455,8 @@ RUN_FEEDS_INSTALL || exit 1
 # - dockerd.init 注入 UCI firewall_backend（默认 nftables），写入 daemon.json 的 "firewall-backend"
 # - 删除 iptables_add_blocking_rule（原生 nft 表自行处理阻断，LuCI 不再报「检测到旧版规则」）
 # - 注入 enable_cgroup_controllers，确保 cgroup v2 控制器在 procd 实例 cgroup 创建前启用
+# - 内置 uci-defaults 首次开机归一：新刷/旧固件升级（sysupgrade 保留旧 /etc/config/dockerd）
+#   都会自动补写 firewall_backend='nftables' 并 commit，对用户无感（哪怕之前是混合规则）
 # 目标 package/feeds/packages/dockerd 为 symlink 指向 feeds/，重跑 feeds install 不会回滚补丁。
 PATCH_DOCKER_NATIVE_NFTABLES() {
 	local ROOT_DIR DOCKERD_DIR DOCKERD_MAKEFILE DOCKERD_INIT DOCKERD_CONFIG
@@ -501,7 +503,20 @@ if len(anchors) != 1:
 makefile_lines[anchors[0] + 1:anchors[0] + 1] = [
     "    +firewall4 \\", "    +kmod-br-netfilter \\"
 ]
-makefile_path.write_text("\n".join(makefile_lines) + "\n")
+makefile_text = "\n".join(makefile_lines) + "\n"
+install_anchor = "\t$(INSTALL_CONF) ./files/etc/config/dockerd $(1)/etc/config/dockerd\n"
+install_block = (
+    "\n"
+    "\t# Force the native nftables backend on first boot (fresh installs and upgrades)\n"
+    "\t$(INSTALL_DIR) $(1)/etc/uci-defaults\n"
+    "\t$(INSTALL_BIN) ./files/etc/uci-defaults/99-dockerd-native-nftables \\\n"
+    "\t\t$(1)/etc/uci-defaults/99-dockerd-native-nftables\n"
+)
+if "99-dockerd-native-nftables" not in makefile_text:
+    if install_anchor not in makefile_text:
+        raise SystemExit("could not patch dockerd install section for uci-defaults")
+    makefile_text = makefile_text.replace(install_anchor, install_anchor + install_block, 1)
+makefile_path.write_text(makefile_text)
 
 content = init_path.read_text()
 
@@ -586,6 +601,26 @@ config globals 'globals'
 config proxies 'proxies'
 DOCKERD_UCI
 
+	# 首次开机归一（新刷 + 旧固件升级都生效）：
+	# sysupgrade 会保留旧的 /etc/config/dockerd（没有 firewall_backend 选项），
+	# 本脚本开机早期（S10boot，早于 dockerd START=99）补写选项并 commit，用户无感。
+	mkdir -p "$DOCKERD_DIR/files/etc/uci-defaults"
+	cat >"$DOCKERD_DIR/files/etc/uci-defaults/99-dockerd-native-nftables" <<'UCIDEFAULTS'
+#!/bin/sh
+# Docker Engine native nftables backend: force-align on first boot.
+# Covers fresh installs and sysupgrade from mixed iptables/nftables images
+# (old /etc/config/dockerd is preserved). This firmware ships no iptables
+# frontend, so any other value would leave Docker without firewall rules.
+[ -f /etc/config/dockerd ] || exit 0
+
+uci -q get dockerd.globals >/dev/null || uci -q set dockerd.globals='globals'
+uci -q set dockerd.globals.firewall_backend='nftables'
+uci -q commit dockerd
+
+exit 0
+UCIDEFAULTS
+	chmod 0755 "$DOCKERD_DIR/files/etc/uci-defaults/99-dockerd-native-nftables"
+
 	# 验收：任一关键点缺失即失败（防 feeds 升级后锚点漂移静默回退）
 	grep -q '^    +firewall4 \\' "$DOCKERD_MAKEFILE" &&
 	grep -q '^    +kmod-br-netfilter \\' "$DOCKERD_MAKEFILE" &&
@@ -596,6 +631,14 @@ DOCKERD_UCI
 	grep -qF 'enable_cgroup_controllers' "$DOCKERD_INIT" &&
 	grep -qF "option firewall_backend 'nftables'" "$DOCKERD_CONFIG" || {
 		echo "[packages] failed to configure Docker native nftables backend" >&2
+		return 1
+	}
+
+	# uci-defaults 归一脚本必须存在且被 Makefile 安装（防 feeds 升级后静默丢失）
+	grep -qF '99-dockerd-native-nftables' "$DOCKERD_MAKEFILE" &&
+	[ -x "$DOCKERD_DIR/files/etc/uci-defaults/99-dockerd-native-nftables" ] &&
+	grep -qF "firewall_backend='nftables'" "$DOCKERD_DIR/files/etc/uci-defaults/99-dockerd-native-nftables" || {
+		echo "[packages] failed to install dockerd uci-defaults for nftables migration" >&2
 		return 1
 	}
 

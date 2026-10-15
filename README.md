@@ -55,11 +55,10 @@ MEDIATEK系列、QUALCOMMAX系列、ROCKCHIP系列、X86系列。
 自 2026-10 起，本仓库固件不再携带任何 iptables 兼容层：
 
 - Docker 使用官方 feeds 的 dockerd（29.x，moby >= 28.4），通过 `Scripts/Packages.sh` 的 `PATCH_DOCKER_NATIVE_NFTABLES` 去掉 iptables/ip6tables/kmod-ipt-* 硬依赖，改为 `+firewall4 +kmod-br-netfilter`，并在 `/etc/config/dockerd` 里默认 `firewall_backend 'nftables'`（写入 daemon.json 的 `"firewall-backend": "nftables"`）。
+- 升级/新刷均无感：固件内置 `/etc/uci-defaults/99-dockerd-native-nftables`，首次开机自动把 sysupgrade 保留的旧 `/etc/config/dockerd` 补写为 `firewall_backend 'nftables'` 并提交（哪怕之前是 iptables/nftables 混合规则，重启后即全部重建为纯 nft），无需任何手动操作。
 - 代理插件均为 nft 模式：PassWall 透明代理钉死 nftables（fw4 下默认即 nft），OpenClash/Daed/HomeProxy 本身就是 nft/eBPF 实现。
 - `WRT-CORE.yml` 编译后会扫描 manifest：任何 `iptables*/ip6tables*/xtables*` 前端混入即直接报错，确保 LuCI 防火墙页不再出现「检测到旧版规则」。
 - 方案移植自 [minihuber/openwrt-7.X](https://cnb.cool/minihuber/openwrt-7.X)（已在其 x86 固件上长期验证）。
-
-注意：旧固件升级上来不会自动改 `/etc/config/dockerd`（conffiles 保留旧值），需手动增加 `option firewall_backend 'nftables'` 后重启 dockerd；全新刷机无需任何操作。
 
 # 目录简要说明
 
