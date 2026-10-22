@@ -448,6 +448,53 @@ git_sparse_clone main https://github.com/kiddin9/op-packages luci-app-cloudflare
 
 # git clone --depth 1 --single-branch https://github.com/breeze303/openwrt-podman package/podman
 UPDATE_PODMAN || exit 1
+
+# libffi 从 feeds 迁回核心仓库后的补位。
+# immortalwrt/packages 70ac3a84(2026-10-19) 删除了 libs/libffi(提交说明为
+# "move to core repo")，对应实现是 immortalwrt/openwrt 9b835ec6 + 32bec3df。
+# 但 VIKINGYFY/immortalwrt 的 main/owrt 分支都还没同步，结果是两边都没有 libffi：
+# run 700 中 python3 编译 _ctypes 报 "fatal error: ffi.h: No such file or directory"，
+# 同时 glib2 / lua-ffi / micropython / node-ffi-napi 全部提示
+# "has a dependency on 'libffi', which does not exist"，整个固件构建中断。
+# 因此在 feeds 安装前检查：核心已有 libffi(上游同步完成)或 feeds 仍有 libffi 时跳过，
+# 否则从核心仓库固定提交取回 Makefile。用 sha 固定可避免上游后续改动带来的漂移。
+RESTORE_LIBFFI() {
+	local ROOT_DIR PACKAGE_DIR LIBFFI_MAKEFILE
+	local LIBFFI_URL="https://raw.githubusercontent.com/immortalwrt/immortalwrt/32bec3df4163228f00dd1cd054a28e7053f4d2ac/package/libs/libffi/Makefile"
+
+	ROOT_DIR=$(OPENWRT_ROOT_DIR)
+	PACKAGE_DIR=$(PACKAGE_WORK_DIR)
+	LIBFFI_MAKEFILE="$PACKAGE_DIR/libs/libffi/Makefile"
+
+	if [ -f "$ROOT_DIR/package/libs/libffi/Makefile" ] ||
+		[ -f "$ROOT_DIR/feeds/packages/libs/libffi/Makefile" ]; then
+		echo "[packages] libffi already provided by core/feeds"
+		return 0
+	fi
+
+	mkdir -p "$(dirname "$LIBFFI_MAKEFILE")"
+	if ! curl -fsSL --retry 3 --retry-all-errors --connect-timeout 15 --max-time 60 \
+		-o "$LIBFFI_MAKEFILE" "$LIBFFI_URL" || [ ! -s "$LIBFFI_MAKEFILE" ]; then
+		rm -rf "$(dirname "$LIBFFI_MAKEFILE")"
+		# libs 可能是本函数新建的空目录，非空时 rmdir 会失败，属正常情况
+		rmdir "$PACKAGE_DIR/libs" 2>/dev/null || true
+		echo "[packages] failed to download libffi Makefile: $LIBFFI_URL" >&2
+		return 1
+	fi
+
+	# 校验下载到的是真正的 libffi 包：包名正确且带完整 sha256 校验值
+	if ! grep -q '^PKG_NAME:=libffi$' "$LIBFFI_MAKEFILE" ||
+		! grep -Eq '^PKG_HASH:=[0-9a-f]{64}$' "$LIBFFI_MAKEFILE"; then
+		rm -rf "$(dirname "$LIBFFI_MAKEFILE")"
+		rmdir "$PACKAGE_DIR/libs" 2>/dev/null || true
+		echo "[packages] invalid libffi Makefile: $LIBFFI_MAKEFILE" >&2
+		return 1
+	fi
+
+	echo "[packages] restored libffi from immortalwrt core (feeds dropped it on 2026-10-19)"
+}
+RESTORE_LIBFFI || exit 1
+
 RUN_FEEDS_INSTALL || exit 1
 
 # Docker Engine 原生 nftables 后端（方案移植自 minihuber/openwrt-7.X）。
