@@ -40,8 +40,8 @@ jobs:
       fail-fast: false
       #max-parallel: 3
       matrix:
-        # CONFIG: [IPQ53XX-WIFI-NO, IPQ95XX-WIFI-YES]
-        CONFIG: [IPQ95XX-WIFI-YES]
+        # CONFIG: [IPQ53XX, IPQ95XX]
+        CONFIG: [IPQ95XX]
         SOURCE: [VIKINGYFY/immortalwrt]
         BRANCH: [owrt]
 
@@ -51,7 +51,7 @@ jobs:
       #编译配置
       WRT_CONFIG: ${{matrix.CONFIG}}
       #默认主题
-      WRT_THEME: aurora
+      WRT_THEME: vantage
       #默认主机名
       WRT_NAME: OWRT
       #默认WIFI名称

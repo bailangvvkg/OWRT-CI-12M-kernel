@@ -85,7 +85,8 @@ jobs:
           remove_android: true
           remove_dotnet: true
           remove_haskell: true
-          remove_tool_cache: true
+          # 保留 tool cache：上游 prepare-build-host.sh 需要 runner 自带的 Go
+          remove_tool_cache: false
           remove_swap: true
           remove_packages: "azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql* temurin-* *llvm* mysql* dotnet-sdk-*"
           remove_packages_one_command: true
@@ -114,21 +115,26 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo -E apt -yqq update
-          sudo -E apt -yqq full-upgrade
-          sudo -E apt -yqq autoremove --purge
-          sudo -E apt -yqq autoclean
-          sudo -E apt -yqq clean
-          sudo -E apt -yqq install dos2unix libfuse-dev
+          sudo apt-get -yqq purge firefox
+          sudo apt-get -yqq update
+          sudo apt-get -yqq full-upgrade
+          sudo apt-get -yqq autoremove --purge
+          sudo apt-get -yqq autoclean
+          sudo apt-get -yqq clean
 
-          # clang
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh 21
+          # 上游统一改用发行版 host LLVM（prepare-build-host.sh 以 llvm-config 定位 BPF 工具链），
+          # 不再从 apt.llvm.org 装 LLVM 21，避免 llvm-config 与 clang 版本错位。
+          sudo apt-get install -y --no-install-recommends \
+            bc bison build-essential bzip2 ca-certificates ccache clang \
+            cmake cpio curl device-tree-compiler dos2unix file flex \
+            g++-multilib gawk gcc-multilib genisoimage gettext git jq \
+            libbpf-dev libclang-dev libdw-dev libelf-dev libfuse-dev \
+            libncurses-dev libssl-dev lld \
+            llvm ninja-build patch perl pkgconf python3 python3-cryptography \
+            python3-dev python3-packaging python3-pyelftools python3-setuptools qemu-utils rsync swig \
+            unzip wget xz-utils zlib1g-dev zstd
 
-          sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-          sudo -E systemctl daemon-reload
-          sudo -E timedatectl set-timezone "Asia/Shanghai"
+          sudo timedatectl set-timezone "Asia/Shanghai"
 
           echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
@@ -150,12 +156,27 @@ jobs:
 
       - name: Initialization Values(初始化变量)
         run: |
-          echo "WRT_DATE=$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")" >> $GITHUB_ENV
-          echo "WRT_MARK=${GITHUB_REPOSITORY%%/*}" >> $GITHUB_ENV
-          echo "WRT_INFO=${WRT_SOURCE%%/*}" >> $GITHUB_ENV
-          echo "WRT_TARGET=$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' ./Config/$WRT_CONFIG.txt)" >> $GITHUB_ENV
-          echo "WRT_KVER=none" >> $GITHUB_ENV
-          echo "WRT_LIST=none" >> $GITHUB_ENV
+          WRT_TARGET=$(grep -m 1 -oP '^CONFIG_TARGET_\K[^=_]+(?=\=y)' "./Config/$WRT_CONFIG.txt")
+          WRT_SUBTARGET=$(grep -m 1 -oP "^CONFIG_TARGET_${WRT_TARGET}_\K[^=_]+(?=\=y)" "./Config/$WRT_CONFIG.txt")
+          WRT_CACHE_SOURCE=${WRT_SOURCE//\//-}
+          WRT_CACHE_BRANCH=${WRT_BRANCH//\//-}
+          WRT_CACHE_TARGET="$WRT_TARGET-$WRT_SUBTARGET"
+          WRT_CACHE_PREFIX="wrt-$WRT_CACHE_SOURCE-$WRT_CACHE_BRANCH-$WRT_CACHE_TARGET"
+          WRT_WIFI=$(grep -oE 'WIFI-(YES|NO)$' <<< "${WRT_CONFIG^^}" || true); WRT_WIFI=${WRT_WIFI:-none}
+
+          {
+            echo "WRT_INFO=${WRT_SOURCE%%/*}"
+            echo "WRT_MARK=${GITHUB_REPOSITORY%%/*}"
+            echo "WRT_DATE=$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")"
+            echo "WRT_CACHE_PREFIX=$WRT_CACHE_PREFIX"
+            echo "WRT_CACHE_TARGET=$WRT_CACHE_TARGET"
+            echo "WRT_SUBTARGET=$WRT_SUBTARGET"
+            echo "WRT_TARGET=$WRT_TARGET"
+            echo "WRT_WIFI=$WRT_WIFI"
+            echo "WRT_KVER=none"
+            echo "WRT_LIST=none"
+          } >> "$GITHUB_ENV"
+          echo "cache_prefix=$WRT_CACHE_PREFIX" >> "$GITHUB_OUTPUT"
 
           sudo mkdir -p $OPENWRT_PATH/build_wrt
           sudo chown $USER:$USER $OPENWRT_PATH/build_wrt
@@ -246,10 +267,11 @@ jobs:
 
       - name: Custom Packages(自定义软件包)
         run: |
-          cd ./wrt/package/
+          cd ./wrt/
 
           $GITHUB_WORKSPACE/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Scripts/Handles.sh
+          $GITHUB_WORKSPACE/.github/scripts/prepare-i2c-tools.sh
 
       - name: Custom Settings(自定义设置)
         run: |
@@ -262,8 +284,16 @@ jobs:
           fi
 
           $GITHUB_WORKSPACE/Scripts/Settings.sh
+          $GITHUB_WORKSPACE/.github/scripts/prepare-build-host.sh
 
           make defconfig -j$(nproc) && make clean -j$(nproc)
+
+      - name: Prepare Rust Toolchain(准备 Rust 工具链)
+        if: env.WRT_TEST != 'true'
+        run: |
+          cd ./wrt/
+
+          $GITHUB_WORKSPACE/.github/scripts/prepare-rust.sh
 
       - name: Download Packages(下载软件包依赖)
         if: env.WRT_TEST != 'true'
@@ -277,7 +307,26 @@ jobs:
         run: |
           cd ./wrt/
 
-          make -j$(nproc) || make -j1 V=s
+          mkdir -p $GITHUB_WORKSPACE/build-reports
+          make -j$(nproc) BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/parallel.tsv" || \
+            make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv"
+
+      - name: Collect Build Reports(收集构建报告)
+        if: always() && env.WRT_TEST != 'true'
+        continue-on-error: true
+        run: |
+          cd ./wrt/
+
+          $GITHUB_WORKSPACE/.github/scripts/collect-build-reports.sh
+
+      - name: Upload Build Reports(上传构建报告)
+        if: always() && env.WRT_TEST != 'true'
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-reports-${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{github.run_attempt}}
+          path: ./build-reports/
+          retention-days: 7
 
       - name: Verify Pure nftables(纯nft防火墙校验)
         if: env.WRT_TEST != 'true'
