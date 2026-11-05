@@ -441,7 +441,7 @@ rm -rf "$(FEEDS_WORK_DIR)"/packages/net/dae*
 # QiuSimons luci-app-daed
 git_package_clone https://github.com/QiuSimons/luci-app-daed dae kix
 PATCH_DAED || exit 1
-mkdir -p Package/libcron && wget -O Package/libcron/Makefile https://raw.githubusercontent.com/immortalwrt/packages/refs/heads/master/libs/libcron/Makefile
+mkdir -p ./package/libcron && wget -O ./package/libcron/Makefile https://raw.githubusercontent.com/immortalwrt/packages/refs/heads/master/libs/libcron/Makefile
 
 # # luci-app-daed-next
 # git clone https://github.com/sbwml/luci-app-daed-next package/daed-next
