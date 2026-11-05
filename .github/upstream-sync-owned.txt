@@ -1,0 +1,31 @@
+# 自动同步上游（VIKINGYFY/OpenWRT-CI）时的冲突处理白名单
+#
+# 规则：
+#   - 命中的文件：冲突时保留【本地】版本（`git checkout --ours`）
+#   - 未命中的文件：冲突时取【上游】版本，并自动开 PR 提醒你复核
+#
+# 支持通配符（如 Config/PRIVATE*），一行一个，`#` 开头为注释。
+# 只想改冲突策略时改这个文件即可，无需动脚本。
+
+# ---- CI 工作流：本地做了触发方式/矩阵/清理/校验等定制 ----
+.github/workflows/WRT-CORE.yml
+.github/workflows/Auto-Clean.yml
+.github/workflows/Cache-Clean.yml
+.github/workflows/QCA-ALL.yml
+.github/workflows/QCB-ALL.yml
+.github/workflows/MTK-ALL.yml
+
+# ---- 编译脚本：本地大量自定义逻辑 ----
+Scripts/Packages.sh
+Scripts/Settings.sh
+
+# ---- 私有代码/配置：上游不存在，永远不被覆盖 ----
+Scripts/PRIVATE.sh
+Config/PRIVATE.txt
+
+# ---- 设备裁剪配置 ----
+Config/IPQ60XX-WIFI-YES.txt
+Config/MEDIATEK-WIFI-YES.txt
+
+# ---- 文档：本地补充了 nftables 等说明 ----
+README.md

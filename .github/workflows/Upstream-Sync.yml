@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: MIT
+# 自动同步上游 VIKINGYFY/OpenWRT-CI，同时保留本地定制。
+# 白名单与策略说明见 .github/upstream-sync-owned.txt 和 .github/scripts/sync-upstream.sh
+
+#CI项目
+name: Upstream-Sync
+
+#CI计划
+on:
+  #自动同步：每天 UTC 18:30（北京时间 02:30）
+  schedule:
+    - cron: 30 18 * * *
+
+  #手动同步
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: '上游分支名（VIKINGYFY/OpenWRT-CI）'
+        default: 'main'
+        required: false
+        type: string
+      force_pr:
+        description: '即使无需复核也创建 PR'
+        default: false
+        required: false
+        type: boolean
+
+#CI权限
+permissions:
+  contents: write
+  pull-requests: write
+
+#避免并发同步
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+#CI任务
+jobs:
+  sync:
+    name: Sync upstream
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Projects(拉取本仓库)
+        uses: actions/checkout@v4
+        with:
+          # 需要完整历史计算 merge-base
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Ensure PyYAML(准备校验依赖)
+        run: python3 -c 'import yaml' 2>/dev/null || python3 -m pip install -q --break-system-packages pyyaml
+
+      - name: Sync Upstream(同步上游并保留本地定制)
+        id: sync
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPSTREAM_REPO: VIKINGYFY/OpenWRT-CI
+          UPSTREAM_REF: ${{ inputs.upstream_ref || 'main' }}
+          BASE_BRANCH: main
+          SYNC_BRANCH: auto/upstream-sync
+          OWNED_FILE: .github/upstream-sync-owned.txt
+          FORCE_PR: ${{ inputs.force_pr || 'false' }}
+        run: bash .github/scripts/sync-upstream.sh
+
+      - name: Result(同步结果)
+        if: always()
+        run: |
+          echo "同步模式：${{ steps.sync.outputs.mode }}"
+          case "${{ steps.sync.outputs.mode }}" in
+            push)         echo "✅ 已自动合并并推送到 main" ;;
+            pull-request) echo "⚠️ 已创建/更新 PR，请在 Pull requests 中复核" ;;
+            up-to-date)   echo "✅ 已是最新，无需同步" ;;
+            *)            echo "❌ 同步未完成，请检查日志" ;;
+          esac

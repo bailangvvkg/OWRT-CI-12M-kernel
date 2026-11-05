@@ -60,6 +60,17 @@ MEDIATEK系列、QUALCOMMAX系列、ROCKCHIP系列、X86系列。
 - `WRT-CORE.yml` 编译后会扫描 manifest：任何 `iptables*/ip6tables*/xtables*` 前端混入即直接报错，确保 LuCI 防火墙页不再出现「检测到旧版规则」。
 - 方案移植自 [minihuber/openwrt-7.X](https://cnb.cool/minihuber/openwrt-7.X)（已在其 x86 固件上长期验证）。
 
+# 自动同步上游（保留本地定制）
+
+仓库每天北京时间 02:30 由 `Upstream-Sync` 工作流自动合并 [VIKINGYFY/OpenWRT-CI](https://github.com/VIKINGYFY/OpenWRT-CI)：
+
+- **冲突策略**：`.github/upstream-sync-owned.txt` 白名单内的文件（本仓库定制过的 CI/脚本/裁剪配置）冲突时保留本地版本；其余文件冲突时采用上游版本
+- **自动校验**：合并后跑 `.github/scripts/validate-sync.sh`（YAML 解析、Shell 语法、`Config/*.txt` 引用、脚本是否存在、执行目录与相对路径是否一致、`WRT_*` 变量是否齐全）
+- **推送规则**：无冲突且校验通过 → 直接推 `main`；有需复核的冲突或校验失败 → 推 `auto/upstream-sync` 分支并开 PR
+- **私有代码**：`Scripts/PRIVATE.sh`、`Config/PRIVATE.txt` 永远不会被上游覆盖，插件与配置写在里面即可
+
+手动触发：Actions → `Upstream-Sync` → Run workflow（可填上游分支，或勾选 `force_pr` 强制走 PR）。
+
 # 目录简要说明
 
 workflows——自定义CI配置
