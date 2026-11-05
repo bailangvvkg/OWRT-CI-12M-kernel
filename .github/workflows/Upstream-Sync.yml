@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Projects(拉取本仓库)
-        uses: actions/checkout@v4
+        uses: actions/checkout@main
         with:
           # 需要完整历史计算 merge-base
           fetch-depth: 0
