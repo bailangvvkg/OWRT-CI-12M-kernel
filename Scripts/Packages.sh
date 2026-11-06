@@ -321,15 +321,31 @@ UPDATE_LANSPEED() {
 		return 1
 	fi
 
-	# The package passes NSS headers through EXTRA_CFLAGS, so its Kbuild file
-	# must opt in to those flags or nss_api_if.h cannot be found.
-	if ! grep -Eq '^[[:space:]]*(subdir-)?ccflags-y[[:space:]]*\+?=[[:space:]]*\$\(EXTRA_CFLAGS\)([[:space:]]|$)' "$NSS_CONTROL_KBUILD"; then
-		sed -i '1i ccflags-y += $(EXTRA_CFLAGS)' "$NSS_CONTROL_KBUILD"
-	fi
-
 	cp -rf "$TMP_DIR/applications/luci-app-lanspeed" "$PACKAGE_DIR/luci-app-lanspeed"
 	cp -rf "$TMP_DIR/net/lanspeedd" "$PACKAGE_DIR/lanspeedd"
-	cp -rf "$TMP_DIR/net/lanspeed-nss-control" "$PACKAGE_DIR/lanspeed-nss-control"
+
+	# The package passes NSS headers through EXTRA_CFLAGS, so its Kbuild file
+	# must opt in to those flags or nss_api_if.h cannot be found.
+	if grep -rqs --include=Makefile '^define[[:space:]]\+KernelPackage/qca-nss-drv' \
+		"$(OPENWRT_ROOT_DIR)/package" "$(FEEDS_WORK_DIR)"; then
+		if ! grep -Eq '^[[:space:]]*(subdir-)?ccflags-y[[:space:]]*\+?=[[:space:]]*\$\(EXTRA_CFLAGS\)([[:space:]]|$)' "$NSS_CONTROL_KBUILD"; then
+			sed -i '1i ccflags-y += $(EXTRA_CFLAGS)' "$NSS_CONTROL_KBUILD"
+		fi
+		cp -rf "$TMP_DIR/net/lanspeed-nss-control" "$PACKAGE_DIR/lanspeed-nss-control"
+	else
+		# 源码树里没有 qca-nss-drv（immortalwrt owrt 分支只有 nss-wifi-drv），
+		# 它的 <nss_api_if.h> 就无从得到，硬编这份 kmod 会直接编译失败。
+		# 这种情况下关掉默认在 qualcommax 上开启的 NSS 开关，
+		# 并摘掉 lanspeedd 对缺失 kmod 的依赖，只保留 TC-BPF 路径。
+		echo "qca-nss-drv not found in source tree, disable lanspeed NSS acceleration" >&2
+		sed -i 's/^\([[:space:]]*\)default y if TARGET_qualcommax$/\1default n/' "$PACKAGE_DIR/luci-app-lanspeed/Makefile"
+		sed -i 's/^LANSPEED_NSS_CONTROL_DEPENDS:=.*/LANSPEED_NSS_CONTROL_DEPENDS:=/' "$PACKAGE_DIR/lanspeedd/Makefile"
+		if grep -q 'default y if TARGET_qualcommax' "$PACKAGE_DIR/luci-app-lanspeed/Makefile"; then
+			echo "failed to disable lanspeed NSS support" >&2
+			return 1
+		fi
+	fi
+
 	rm -rf "$TMP_DIR"
 }
 

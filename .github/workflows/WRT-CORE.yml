@@ -303,6 +303,11 @@ jobs:
 
           $GITHUB_WORKSPACE/.github/scripts/prepare-rust.sh
 
+          # luci-app-lanspeed（Rust/Aya）编译时用 -Z build-std，需要 rust-src
+          RUST_TOOLCHAIN=$(rustup show active-toolchain | awk '{print $1}')
+          rustup component add --toolchain "$RUST_TOOLCHAIN" rust-src
+          test -d "$(rustup run "$RUST_TOOLCHAIN" rustc --print sysroot)/lib/rustlib/src/rust/library"
+
       - name: Download Packages(下载软件包依赖)
         if: env.WRT_TEST != 'true'
         run: |
