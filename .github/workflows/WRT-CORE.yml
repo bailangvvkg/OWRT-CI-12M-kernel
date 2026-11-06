@@ -190,7 +190,6 @@ jobs:
             $GITHUB_WORKSPACE/.npm \
             $GITHUB_WORKSPACE/.pnpm \
             $GITHUB_WORKSPACE/.pnpm-store \
-            $GITHUB_WORKSPACE/.rustup \
             $GITHUB_WORKSPACE/.tmp
 
           {
@@ -198,7 +197,8 @@ jobs:
             echo "XDG_CACHE_HOME=$GITHUB_WORKSPACE/.cache"
             echo "XDG_DATA_HOME=$GITHUB_WORKSPACE/.local/share"
             echo "CARGO_HOME=$GITHUB_WORKSPACE/.cargo"
-            echo "RUSTUP_HOME=$GITHUB_WORKSPACE/.rustup"
+            # 不覆盖 RUSTUP_HOME：runner 预装的 stable 工具链在 $HOME/.rustup，
+            # 指到工作区空目录会导致 rustup 报 "no active toolchain"。
             echo "GOCACHE=$GITHUB_WORKSPACE/.cache/go-build"
             echo "GOMODCACHE=$GITHUB_WORKSPACE/.cache/go-mod"
             echo "npm_config_cache=$GITHUB_WORKSPACE/.npm"
@@ -292,6 +292,14 @@ jobs:
         if: env.WRT_TEST != 'true'
         run: |
           cd ./wrt/
+
+          # 保险：若 RUSTUP_HOME/CARGO_HOME 被指向空的工件目录，rustup 会报
+          # "no active toolchain"，这里回落到 runner 预装的用户级工具链。
+          if ! rustup show active-toolchain >/dev/null 2>&1; then
+            export RUSTUP_HOME="$HOME/.rustup"
+            export CARGO_HOME="$HOME/.cargo"
+            rustup show active-toolchain
+          fi
 
           $GITHUB_WORKSPACE/.github/scripts/prepare-rust.sh
 
