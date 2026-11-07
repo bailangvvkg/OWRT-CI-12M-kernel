@@ -464,7 +464,7 @@ mkdir -p ./package/libcron && wget -O ./package/libcron/Makefile https://raw.git
 
 git_sparse_clone main https://github.com/kenzok8/small-package daed-next luci-app-daed-next gost luci-app-gost luci-app-adguardhome
 
-git_sparse_clone main https://github.com/kiddin9/op-packages luci-app-cloudflarespeedtest luci-app-nginx-manager luci-app-wechatpush || exit 1
+git_sparse_clone main https://github.com/kiddin9/op-packages luci-app-cloudflarespeedtest luci-app-wechatpush || exit 1
 
 # docker：改用官方 feeds（luci: luci-app-dockerman；packages: docker/dockerd/docker-compose，dockerd 29.6.1）。
 # 不再克隆 kiddin9/op-packages 的 dockerd(27.3.1)：其仅有 iptables 兼容层，
@@ -781,7 +781,8 @@ EOF
 	chmod +x "$UCI_DEFAULTS_FILE"
 }
 
-PATCH_NGINX || exit 1
+# 不再需要 Nginx：已改回 Uhttpd，跳过 nginx 配置补丁
+# PATCH_NGINX || exit 1
 
 # 查看在线端
 git_package_clone https://github.com/zzsj0928/luci-app-pushbot luci-app-pushbot

@@ -324,14 +324,18 @@ echo "CONFIG_PACKAGE_luci-app-filemanager=y" >> ./.config
 echo "CONFIG_PACKAGE_luci-app-gost=y" >> ./.config
 # Git
 echo "CONFIG_PACKAGE_git-http=y" >> ./.config
-# Nginx替换Uhttpd
-echo "CONFIG_PACKAGE_nginx-ssl=y" >> ./.config
-echo "CONFIG_NGINX_PCRE=y" >> ./.config
-echo "CONFIG_PACKAGE_nginx-ssl-util=y" >> ./.config
-echo "CONFIG_PACKAGE_luci-nginx=y" >> ./.config
-echo "CONFIG_PACKAGE_nginx-mod-luci=y" >> ./.config
+# Nginx替换Uhttpd —— 改回 Uhttpd（不装 Nginx）
+# echo "CONFIG_PACKAGE_nginx-ssl=y" >> ./.config
+# echo "CONFIG_NGINX_PCRE=y" >> ./.config
+# echo "CONFIG_PACKAGE_nginx-ssl-util=y" >> ./.config
+# echo "CONFIG_PACKAGE_luci-nginx=y" >> ./.config
+# echo "CONFIG_PACKAGE_nginx-mod-luci=y" >> ./.config
 # Nginx的图形化界面
-echo "CONFIG_PACKAGE_luci-app-nginx-manager=y" >> ./.config
+# echo "CONFIG_PACKAGE_luci-app-nginx-manager=y" >> ./.config
+# Uhttpd 作为 LuCI 的 Web 服务器（与 luci 及各主题默认兼容）
+echo "CONFIG_PACKAGE_uhttpd=y" >> ./.config
+echo "CONFIG_PACKAGE_uhttpd-ubus=y" >> ./.config
+echo "CONFIG_PACKAGE_luci-base=y" >> ./.config
 # HAProxy 比Nginx更强大的反向代理服务器
 # echo "CONFIG_PACKAGE_luci-app-haproxy-tcp=y" >> ./.config
 # Adguardhome去广告
