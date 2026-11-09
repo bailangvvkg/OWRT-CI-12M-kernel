@@ -6,16 +6,11 @@ name: QCA-ALL
 
 #CI计划
 on:
-  # #自动编译：当Auto-Clean运行完成后
-  # workflow_run:
-  #   workflows: ["Auto-Clean"]
-  #   types:
-  #     - completed
-
-  # #自动编译
-  schedule:
-    # 每天编译：UTC 19:00 = 北京 03:00，排在 Upstream-Sync（UTC 18:30）之后
-    - cron: 0 19 * * *
+  #自动编译：当 Upstream-Sync 运行完成后（严格排在同步之后，不受 cron 延迟/丢单影响）
+  workflow_run:
+    workflows: ["Upstream-Sync"]
+    types:
+      - completed
 
   #手动编译
   workflow_dispatch:

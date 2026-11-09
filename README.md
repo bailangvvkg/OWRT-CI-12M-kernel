@@ -73,19 +73,21 @@ MEDIATEK系列、QUALCOMMAX系列、ROCKCHIP系列、X86系列。
 
 # 每日自动流水线（北京时间）
 
-全部按顺序错峰，互不抢 runner：
+每天自动跑一轮，链式串行，互不抢 runner：
 
-| 时间 | 工作流 | 作用 |
-| --- | --- | --- |
-| 02:00 | `Release-Clean` | 清理 7 天前的固件（Release + tag） |
-| 02:30 | `Upstream-Sync` | 同步上游（无冲突直推 main，有冲突走 PR） |
-| 03:00 | `QCA-ALL` | 编译 IPQ60XX-WIFI-YES |
-| 05:00 | `MTK-ALL` | 编译 MEDIATEK-WIFI-YES |
+| 时间 | 工作流 | 触发方式 | 作用 |
+| --- | --- | --- | --- |
+| 02:00 | `Release-Clean` | cron | 清理 7 天前的固件（Release + tag） |
+| 02:30 | `Upstream-Sync` | cron | 同步上游（无冲突直推 main，有冲突走 PR） |
+| 同步完成即开始 | `QCA-ALL` | `workflow_run` | 编译 IPQ60XX-WIFI-YES |
+| QCA 完成后接上 | `MTK-ALL` | `workflow_run` | 编译 MEDIATEK-WIFI-YES |
 
+- 两个编译不再用 `cron`，而是链在上一环节完成之后（`Upstream-Sync` → `QCA-ALL` → `MTK-ALL`）：既保证吃上游最新提交，也不会因为 GitHub 定时延迟/丢单而断档；前一环失败也会继续下一环（方便看出问题范围）
+- 手动补跑：Actions → 选 `Upstream-Sync` / `QCA-ALL` / `MTK-ALL` 均可 → Run workflow
 - 固件保留策略：只留最近 **7 天**，并额外保证每种配置里最新的 1 个永不删（避免连续编译失败时把可刷固件删空）；实现见 `.github/scripts/prune-releases.sh`
 - 手动清理：Actions → `Release-Clean` → Run workflow（可改 `keep_days`，或勾 `dry_run` 先只预览不删）
 - `Auto-Clean`（上游自带）会删除 **全部** Release，已停止定时，只作备用；如有需要请优先用 `Release-Clean`
-- `QCB-ALL`（IPQ95XX）的定时已暂停，要启用就把注释恢复成 `0 23 * * *`（与上面两个错开）
+- `QCB-ALL`（IPQ95XX）已手动禁用、定时也已注释，要启用就取消 `schedule` 注释（与上面两个错开）
 
 # 目录简要说明
 
