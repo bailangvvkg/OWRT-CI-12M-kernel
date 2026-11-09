@@ -3,6 +3,9 @@
 
 name: Auto-Clean
 
+# 注意：本工作流会删除全部 Release（releases_keep_latest: 0），仅供备用。
+# 日常清理请用 Release-Clean.yml（保留最近 N 天）。
+
 on:
   # #自动清理：每天早上5点
   # schedule:

@@ -71,6 +71,22 @@ MEDIATEK系列、QUALCOMMAX系列、ROCKCHIP系列、X86系列。
 
 手动触发：Actions → `Upstream-Sync` → Run workflow（可填上游分支，或勾选 `force_pr` 强制走 PR）。
 
+# 每日自动流水线（北京时间）
+
+全部按顺序错峰，互不抢 runner：
+
+| 时间 | 工作流 | 作用 |
+| --- | --- | --- |
+| 02:00 | `Release-Clean` | 清理 7 天前的固件（Release + tag） |
+| 02:30 | `Upstream-Sync` | 同步上游（无冲突直推 main，有冲突走 PR） |
+| 03:00 | `QCA-ALL` | 编译 IPQ60XX-WIFI-YES |
+| 05:00 | `MTK-ALL` | 编译 MEDIATEK-WIFI-YES |
+
+- 固件保留策略：只留最近 **7 天**，并额外保证每种配置里最新的 1 个永不删（避免连续编译失败时把可刷固件删空）；实现见 `.github/scripts/prune-releases.sh`
+- 手动清理：Actions → `Release-Clean` → Run workflow（可改 `keep_days`，或勾 `dry_run` 先只预览不删）
+- `Auto-Clean`（上游自带）会删除 **全部** Release，已停止定时，只作备用；如有需要请优先用 `Release-Clean`
+- `QCB-ALL`（IPQ95XX）的定时已暂停，要启用就把注释恢复成 `0 23 * * *`（与上面两个错开）
+
 # 目录简要说明
 
 workflows——自定义CI配置

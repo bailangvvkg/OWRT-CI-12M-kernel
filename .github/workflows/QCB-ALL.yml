@@ -12,9 +12,9 @@ on:
   #   types:
   #     - completed
   # #自动编译
-  schedule:
-    # 每周一构建一次 (例如，每周一凌晨3点)
-    - cron: 0 22 * * *
+  # 目前暂停 IPQ95XX 定时编译；如需启用请取消注释，并注意与 QCA(19:00)/MTK(21:00) 错峰
+  # schedule:
+  #   - cron: 0 23 * * *
 
   #手动编译
   workflow_dispatch:

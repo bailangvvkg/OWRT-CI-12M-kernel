@@ -11,6 +11,11 @@ on:
   #   workflows: ["Auto-Clean"]
   #   types:
   #     - completed
+  # #自动编译
+  schedule:
+    # 每天编译：UTC 21:00 = 北京 05:00，排在 QCA-ALL（UTC 19:00）之后错峰
+    - cron: 0 21 * * *
+
   #手动编译
   workflow_dispatch:
     inputs:

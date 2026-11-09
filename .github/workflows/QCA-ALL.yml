@@ -14,8 +14,8 @@ on:
 
   # #自动编译
   schedule:
-    # 每周一构建一次 (例如，每周一凌晨3点)
-    - cron: 0 22 * * *
+    # 每天编译：UTC 19:00 = 北京 03:00，排在 Upstream-Sync（UTC 18:30）之后
+    - cron: 0 19 * * *
 
   #手动编译
   workflow_dispatch:

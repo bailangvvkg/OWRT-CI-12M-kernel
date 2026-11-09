@@ -1,0 +1,68 @@
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2026 VIKINGYFY
+
+#CI项目
+name: Release-Clean
+
+#CI计划
+on:
+  # #自动清理：只保留最近 7 天的固件（UTC 18:00 = 北京 02:00，早于上游同步与各平台编译）
+  schedule:
+    - cron: 0 18 * * *
+
+  #手动清理
+  workflow_dispatch:
+    inputs:
+      keep_days:
+        description: '保留最近多少天的固件'
+        default: '7'
+        required: false
+        type: string
+      dry_run:
+        description: '只列出待删除项，不实际删除'
+        default: false
+        required: false
+        type: boolean
+
+#CI权限
+permissions:
+  contents: write
+
+#同一时间只跑一个清理任务
+concurrency:
+  group: release-clean
+  cancel-in-progress: false
+
+#CI任务
+jobs:
+  release_clean:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Projects(拉取云编译仓库(本仓库)脚本)
+        if: ${{github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'}}
+        uses: actions/checkout@main
+
+      - name: Check Server Performance(检查服务器性能)
+        run: |
+          echo "CPU: $(nproc) 核"
+          echo "内存: $(free -h | awk '/Mem:/{print $2}')"
+          echo "磁盘: $(df -h / | awk 'NR==2{print $4}') 可用"
+
+      - name: Prune Old Releases(清理过期固件)
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          KEEP_DAYS: ${{inputs.keep_days || '7'}}
+          KEEP_LATEST: '1'
+          DRY_RUN: ${{inputs.dry_run || 'false'}}
+        run: |
+          bash "$GITHUB_WORKSPACE/.github/scripts/prune-releases.sh"
+
+      - name: Summary(清理结果)
+        if: always()
+        run: |
+          echo "保留策略：最近 ${{inputs.keep_days || '7'}} 天（每种配置至少留最新 1 个）" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo '```'
+            echo "run: ${{github.run_id}}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

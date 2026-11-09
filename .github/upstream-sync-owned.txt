@@ -29,3 +29,5 @@ Config/MEDIATEK-WIFI-YES.txt
 
 # ---- 文档：本地补充了 nftables 等说明 ----
 README.md
+.github/workflows/Release-Clean.yml
+.github/scripts/prune-releases.sh
